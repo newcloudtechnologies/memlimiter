@@ -8,7 +8,7 @@ import (
 
 	"github.com/pkg/errors"
 	"gitlab.stageoffice.ru/UCS-COMMON/gaben"
-	"gitlab.stageoffice.ru/UCS-COMMON/utils/breaker"
+	"github.com/newcloudtechnologies/memlimiter/utils/breaker"
 	"gitlab.stageoffice.ru/UCS-PLATFORM/servus/stats/aggregate"
 
 	"github.com/newcloudtechnologies/memlimiter/backpressure"

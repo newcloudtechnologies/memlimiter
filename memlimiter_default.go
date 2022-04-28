@@ -12,7 +12,6 @@ import (
 
 	"github.com/pkg/errors"
 	"gitlab.stageoffice.ru/UCS-COMMON/gaben"
-	utils_configs "gitlab.stageoffice.ru/UCS-COMMON/utils/configs"
 	"gitlab.stageoffice.ru/UCS-PLATFORM/servus"
 	"gitlab.stageoffice.ru/UCS-PLATFORM/servus/stats/aggregate"
 
@@ -138,10 +137,6 @@ func newMemLimiterDefault(
 	}
 
 	logger = gaben.Spawn(logger).With(gaben.String("subsystem", "memlimiter"))
-
-	if err := utils_configs.Prepare(cfg); err != nil {
-		return nil, errors.Wrap(err, "prepare config")
-	}
 
 	if applicationTerminator == nil {
 		return nil, errors.New("nil application terminator passed")

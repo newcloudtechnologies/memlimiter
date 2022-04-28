@@ -2,8 +2,8 @@ package nextgc
 
 import (
 	"github.com/pkg/errors"
-	"gitlab.stageoffice.ru/UCS-COMMON/utils/config/bytes"
-	"gitlab.stageoffice.ru/UCS-COMMON/utils/config/duration"
+	"github.com/newcloudtechnologies/memlimiter/utils/config/bytes"
+	"github.com/newcloudtechnologies/memlimiter/utils/config/duration"
 )
 
 // ControllerConfig - конфигурация PD-регулятора.

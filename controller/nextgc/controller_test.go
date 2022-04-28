@@ -11,8 +11,8 @@ import (
 	servus_stats "gitlab.stageoffice.ru/UCS-COMMON/schemagen-go/v41/servus/stats/v1"
 
 	"gitlab.stageoffice.ru/UCS-COMMON/gaben"
-	"gitlab.stageoffice.ru/UCS-COMMON/utils/config/bytes"
-	"gitlab.stageoffice.ru/UCS-COMMON/utils/config/duration"
+	"github.com/newcloudtechnologies/memlimiter/utils/config/bytes"
+	"github.com/newcloudtechnologies/memlimiter/utils/config/duration"
 	"gitlab.stageoffice.ru/UCS-PLATFORM/servus/stats/aggregate"
 
 	"github.com/newcloudtechnologies/memlimiter/backpressure"
