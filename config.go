@@ -1,7 +1,7 @@
 package memlimiter
 
 import (
-	"gitlab.stageoffice.ru/UCS-COMMON/errors"
+	"github.com/pkg/errors"
 
 	"github.com/newcloudtechnologies/memlimiter/controller/nextgc"
 )

@@ -1,7 +1,7 @@
 package nextgc
 
 import (
-	"gitlab.stageoffice.ru/UCS-COMMON/errors"
+	"github.com/pkg/errors"
 	"gitlab.stageoffice.ru/UCS-COMMON/utils/config/bytes"
 	"gitlab.stageoffice.ru/UCS-COMMON/utils/config/duration"
 )
@@ -31,11 +31,11 @@ func (c *ControllerConfig) Prepare() error {
 	}
 
 	if c.DangerZoneGOGC == 0 || c.DangerZoneGOGC > 100 {
-		return errors.Newf("invalid DangerZoneGOGC value (must belong to [0; 100])")
+		return errors.New("invalid DangerZoneGOGC value (must belong to [0; 100])")
 	}
 
 	if c.DangerZoneThrottling == 0 || c.DangerZoneThrottling > 100 {
-		return errors.Newf("invalid DangerZoneThrottling value (must belong to [0; 100])")
+		return errors.Errorf("invalid DangerZoneThrottling value (must belong to [0; 100])")
 	}
 
 	if c.Period.Duration == 0 {
@@ -61,7 +61,7 @@ type ComponentProportionalConfig struct {
 // Prepare - валидатор конфига.
 func (c *ComponentProportionalConfig) Prepare() error {
 	if c.Coefficient == 0 {
-		return errors.Newf("empty Coefficient makes no sense")
+		return errors.New("empty Coefficient makes no sense")
 	}
 
 	return nil

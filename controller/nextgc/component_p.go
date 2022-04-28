@@ -5,7 +5,7 @@ import (
 
 	metrics "github.com/rcrowley/go-metrics"
 
-	"gitlab.stageoffice.ru/UCS-COMMON/errors"
+	"github.com/pkg/errors"
 	"gitlab.stageoffice.ru/UCS-COMMON/gaben"
 )
 
@@ -36,7 +36,7 @@ func (c *componentP) value(memoryUsage float64) (float64, error) {
 
 func (c *componentP) valueRaw(memoryUsage float64) (float64, error) {
 	if memoryUsage < 0 {
-		return math.NaN(), errors.Newf("value is undefined if memory usage = %v", memoryUsage)
+		return math.NaN(), errors.Errorf("value is undefined if memory usage = %v", memoryUsage)
 	}
 
 	if memoryUsage >= 1 {

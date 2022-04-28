@@ -7,7 +7,7 @@ import (
 	"gitlab.stageoffice.ru/UCS-COMMON/gaben"
 	servus_stats "gitlab.stageoffice.ru/UCS-COMMON/schemagen-go/v41/servus/stats/v1"
 
-	"gitlab.stageoffice.ru/UCS-COMMON/errors"
+	"github.com/pkg/errors"
 )
 
 var _ Operator = (*operatorImpl)(nil)

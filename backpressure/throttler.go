@@ -7,7 +7,7 @@ import (
 
 	servus_stats "gitlab.stageoffice.ru/UCS-COMMON/schemagen-go/v41/servus/stats/v1"
 
-	"gitlab.stageoffice.ru/UCS-COMMON/errors"
+	"github.com/pkg/errors"
 	"gitlab.stageoffice.ru/UCS-PLATFORM/servus/stats/metrics"
 )
 
