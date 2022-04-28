@@ -1,0 +1,34 @@
+%! Author = isaev
+%! Date = 3/18/22
+
+% Preamble
+\documentclass[11pt]{article}
+
+% Packages
+\usepackage{amsmath}
+
+% Document
+\begin{document}
+    \begin{equation}
+        Output =
+        \begin{cases}
+            100 & P > 100 \\
+            0 & P < 0 \\
+            P & \text{otherwise}
+        \end{cases}
+    \end{equation}
+    \begin{equation}
+        GOGC =
+        \begin{cases}
+            Output & Utilization > DangerZoneGOGC \\
+            100 & \text{otherwise}
+        \end{cases}
+    \end{equation}
+    \begin{equation}
+        Throttling =
+        \begin{cases}
+            Output & Utilization > DangerZoneThrottling \\
+            0 & \text{otherwise}
+        \end{cases}
+    \end{equation}
+\end{document}
