@@ -6,13 +6,12 @@ import (
 	"time"
 
 	"code.cloudfoundry.org/bytefmt"
-	"github.com/stretchr/testify/mock"
-
+	"github.com/go-logr/logr/testr"
 	servus_stats "gitlab.stageoffice.ru/UCS-COMMON/schemagen-go/v41/servus/stats/v1"
 
-	"gitlab.stageoffice.ru/UCS-COMMON/gaben"
 	"github.com/newcloudtechnologies/memlimiter/utils/config/bytes"
 	"github.com/newcloudtechnologies/memlimiter/utils/config/duration"
+	"github.com/stretchr/testify/mock"
 	"gitlab.stageoffice.ru/UCS-PLATFORM/servus/stats/aggregate"
 
 	"github.com/newcloudtechnologies/memlimiter/backpressure"
@@ -20,7 +19,7 @@ import (
 )
 
 func TestController(t *testing.T) {
-	logger := gaben.TestingLogger(t, "")
+	logger := testr.New(t)
 
 	const servusPeriod = 100 * time.Millisecond
 

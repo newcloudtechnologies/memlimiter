@@ -4,11 +4,11 @@ import (
 	"math"
 	"time"
 
+	"github.com/go-logr/logr"
 	servus_stats "gitlab.stageoffice.ru/UCS-COMMON/schemagen-go/v41/servus/stats/v1"
 
-	"github.com/pkg/errors"
-	"gitlab.stageoffice.ru/UCS-COMMON/gaben"
 	"github.com/newcloudtechnologies/memlimiter/utils/breaker"
+	"github.com/pkg/errors"
 	"gitlab.stageoffice.ru/UCS-PLATFORM/servus/stats/aggregate"
 
 	"github.com/newcloudtechnologies/memlimiter/backpressure"
@@ -48,7 +48,7 @@ type controllerImpl struct {
 	getStatsChan chan *getStatsRequest
 
 	cfg     *ControllerConfig
-	logger  gaben.Logger
+	logger  logr.Logger
 	breaker *breaker.Breaker
 }
 
@@ -88,7 +88,7 @@ func (c *controllerImpl) loop() {
 		case serviceStats := <-c.input.Updates():
 			// обновление состояния осуществляется при каждом поступлении статистики от Сервуса
 			if err := c.updateState(serviceStats); err != nil {
-				c.logger.Error("update state", gaben.Error(err))
+				c.logger.Error(err, "update state")
 				// невозможность вычислить контрольные параметры - фатальная ошибка;
 				// завершаем приложение через побочный эффект
 				c.applicationTerminator.Terminate(err)
@@ -100,7 +100,7 @@ func (c *controllerImpl) loop() {
 			// клиент обязан сам убедиться, что период отправки управляющего сигнала больше либо равен периоду отправки статистики Сервусом,
 			// иначе один и тот же сигнал будет высылаться несколько раз
 			if err := c.applyControlValue(); err != nil {
-				c.logger.Error("apply control value", gaben.Error(err))
+				c.logger.Error(err, "apply control value")
 				// невозможность применить контрольные параметры - фатальная ошибка;
 				// завершаем приложение через побочный эффект
 				c.applicationTerminator.Terminate(err)
@@ -216,7 +216,7 @@ func (c *controllerImpl) updateControlParameterThrottling() {
 
 func (c *controllerImpl) applyControlValue() error {
 	if c.controlParameters == nil {
-		c.logger.Warning("control parameters are not ready yet")
+		c.logger.Info("control parameters are not ready yet")
 
 		return nil
 	}
@@ -260,7 +260,7 @@ func (c *controllerImpl) Quit() {
 
 // NewControllerFromConfig - контроллер регулятора.
 func NewControllerFromConfig(
-	logger gaben.Logger,
+	logger logr.Logger,
 	cfg *ControllerConfig,
 	input aggregate.Subscription,
 	consumptionReporter memlimiter_utils.ConsumptionReporter,

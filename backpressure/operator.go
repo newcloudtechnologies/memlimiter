@@ -4,7 +4,7 @@ import (
 	"runtime/debug"
 	"sync/atomic"
 
-	"gitlab.stageoffice.ru/UCS-COMMON/gaben"
+	"github.com/go-logr/logr"
 	servus_stats "gitlab.stageoffice.ru/UCS-COMMON/schemagen-go/v41/servus/stats/v1"
 
 	"github.com/pkg/errors"
@@ -15,7 +15,7 @@ var _ Operator = (*operatorImpl)(nil)
 type operatorImpl struct {
 	*throttler
 	lastControlParameters atomic.Value
-	logger                gaben.Logger
+	logger                logr.Logger
 }
 
 func (b *operatorImpl) GetStats() *servus_stats.GoMemLimiterStats_BackpressureStats {
@@ -48,13 +48,13 @@ func (b *operatorImpl) SetControlParameters(value *ControlParameters) error {
 	// и интенсивность сбора мусора
 	debug.SetGCPercent(value.GOGC)
 
-	b.logger.Info("control parameters changed", value.ToGaben()...)
+	b.logger.Info("control parameters changed", value.ToKeysAndValues()...)
 
 	return nil
 }
 
 // NewOperator - конструктор нового оператора.
-func NewOperator(logger gaben.Logger) Operator {
+func NewOperator(logger logr.Logger) Operator {
 	return &operatorImpl{
 		logger:    logger,
 		throttler: newThrottler(),

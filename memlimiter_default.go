@@ -4,6 +4,7 @@ import (
 	"context"
 	"sync/atomic"
 
+	"github.com/go-logr/logr"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -11,7 +12,6 @@ import (
 	servus_stats "gitlab.stageoffice.ru/UCS-COMMON/schemagen-go/v41/servus/stats/v1"
 
 	"github.com/pkg/errors"
-	"gitlab.stageoffice.ru/UCS-COMMON/gaben"
 	"gitlab.stageoffice.ru/UCS-PLATFORM/servus"
 	"gitlab.stageoffice.ru/UCS-PLATFORM/servus/stats/aggregate"
 
@@ -28,7 +28,7 @@ type memLimiterImpl struct {
 	consumptionReporter   utils.ConsumptionReporter
 	applicationTerminator utils.ApplicationTerminator
 	statsSubscription     aggregate.Subscription
-	logger                gaben.Logger
+	logger                logr.Logger
 	cfg                   *Config
 }
 
@@ -85,12 +85,12 @@ func (ml *memLimiterImpl) MakeUnaryServerInterceptor() grpc.UnaryServerIntercept
 			return handler(ctx, req)
 		}
 
-		logger, ok := gaben.FromContext(ctx)
-		if !ok {
+		logger, err := logr.FromContext(ctx)
+		if err != nil {
 			logger = ml.logger
 		}
 
-		logger.Warning("request has been throttled")
+		logger.Info("request has been throttled")
 
 		return nil, status.Error(codes.ResourceExhausted, "request has been throttled")
 	}
@@ -104,12 +104,12 @@ func (ml *memLimiterImpl) MakeStreamServerInterceptor() grpc.StreamServerInterce
 			return handler(srv, ss)
 		}
 
-		logger, ok := gaben.FromContext(ss.Context())
-		if !ok {
+		logger, err := logr.FromContext(ss.Context())
+		if err != nil {
 			logger = ml.logger
 		}
 
-		logger.Warning("request has been throttled")
+		logger.Info("request has been throttled")
 
 		return status.Error(codes.ResourceExhausted, "request has been throttled")
 	}
@@ -127,17 +127,11 @@ func (ml *memLimiterImpl) Quit() {
 }
 
 func newMemLimiterDefault(
-	logger gaben.Logger, // обязательный
+	logger logr.Logger, // обязательный
 	cfg *Config, // обязательный
 	applicationTerminator utils.ApplicationTerminator, // обязательный
 	consumptionReporter utils.ConsumptionReporter, // опциональный
 ) (MemLimiter, error) {
-	if logger == nil {
-		return nil, errors.New("nil logger passed")
-	}
-
-	logger = gaben.Spawn(logger).With(gaben.String("subsystem", "memlimiter"))
-
 	if applicationTerminator == nil {
 		return nil, errors.New("nil application terminator passed")
 	}

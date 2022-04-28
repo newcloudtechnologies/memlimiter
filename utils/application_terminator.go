@@ -1,7 +1,9 @@
 package utils
 
 import (
-	"gitlab.stageoffice.ru/UCS-COMMON/gaben"
+	"os"
+
+	"github.com/go-logr/logr"
 )
 
 // ApplicationTerminator - интерфейс для завершения работы приложения по команде MemLimiter.
@@ -14,17 +16,18 @@ type ApplicationTerminator interface {
 }
 
 type ungracefulApplicationTerminator struct {
-	logger gaben.Logger
+	logger logr.Logger
 }
 
 func (at *ungracefulApplicationTerminator) Terminate(fatalErr error) {
-	at.logger.Fatal("terminate application due to fatal error", gaben.Error(fatalErr))
+	at.logger.Error(fatalErr, "terminate application due to fatal error")
+	os.Exit(1)
 }
 
 // NewUngracefulApplicationTerminator создаёт тривиальную имплементацию выключателя,
 // при поступлении ошибок процесс просто гасится с os.Exit(1).
 // Использовать только для самых простых stateless сервисов.
-func NewUngracefulApplicationTerminator(logger gaben.Logger) ApplicationTerminator {
+func NewUngracefulApplicationTerminator(logger logr.Logger) ApplicationTerminator {
 	return &ungracefulApplicationTerminator{
 		logger: logger,
 	}

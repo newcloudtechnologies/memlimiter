@@ -1,14 +1,13 @@
 package memlimiter
 
 import (
-	"gitlab.stageoffice.ru/UCS-COMMON/gaben"
-
+	"github.com/go-logr/logr"
 	"github.com/newcloudtechnologies/memlimiter/utils"
 )
 
 // NewMemLimiterFromConfig - конструктор системы управления бюджетом памяти.
 func NewMemLimiterFromConfig(
-	logger gaben.Logger,
+	logger logr.Logger,
 	cfg *Config,
 	applicationTerminator utils.ApplicationTerminator,
 	consumptionReporter utils.ConsumptionReporter,

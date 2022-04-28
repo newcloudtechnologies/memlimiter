@@ -3,15 +3,15 @@ package nextgc
 import (
 	"math"
 
+	"github.com/go-logr/logr"
 	metrics "github.com/rcrowley/go-metrics"
 
 	"github.com/pkg/errors"
-	"gitlab.stageoffice.ru/UCS-COMMON/gaben"
 )
 
 // пропорциональный компонент PD-контроллера.
 type componentP struct {
-	logger     gaben.Logger
+	logger     logr.Logger
 	lastValues metrics.Sample
 	cfg        *ComponentProportionalConfig
 }
@@ -45,10 +45,10 @@ func (c *componentP) valueRaw(memoryUsage float64) (float64, error) {
 		// во всяком случае, встречались раньше, когда MemLimiter таргетировал не RSS utilization, a Memory Budget utilization.
 		const maxReasonableOutput = 100
 
-		c.logger.Warning(
+		c.logger.Info(
 			"not a good value for memory usage, cutting output value",
-			gaben.Float64("memory_usage", memoryUsage),
-			gaben.Float64("output_value", maxReasonableOutput),
+			"memory_usage", memoryUsage,
+			"output_value", maxReasonableOutput,
 		)
 
 		return maxReasonableOutput, nil
@@ -71,7 +71,7 @@ func (c *componentP) valueEMA(memoryUsage float64) (float64, error) {
 	return c.lastValues.Mean() / reductionFactor, nil
 }
 
-func newComponentP(logger gaben.Logger, cfg *ComponentProportionalConfig) *componentP {
+func newComponentP(logger logr.Logger, cfg *ComponentProportionalConfig) *componentP {
 	out := &componentP{
 		logger: logger,
 		cfg:    cfg,

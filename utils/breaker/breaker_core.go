@@ -5,7 +5,7 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"gitlab.stageoffice.ru/UCS-COMMON/errors"
+	"github.com/pkg/errors"
 )
 
 // breakerCore предоставляет интерфейс для корректной остановки какой-либо подсистемы
