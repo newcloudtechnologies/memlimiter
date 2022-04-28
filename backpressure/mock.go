@@ -1,9 +1,8 @@
 package backpressure
 
 import (
+	"github.com/newcloudtechnologies/memlimiter/stats"
 	"github.com/stretchr/testify/mock"
-
-	"gitlab.stageoffice.ru/UCS-COMMON/schemagen-go/v41/servus/stats/v1"
 )
 
 var _ Operator = (*OperatorMock)(nil)
@@ -12,12 +11,12 @@ type OperatorMock struct {
 	mock.Mock
 }
 
-func (m *OperatorMock) GetStats() *stats.GoMemLimiterStats_BackpressureStats {
+func (m *OperatorMock) GetStats() *stats.Backpressure {
 	// TODO implement me
 	panic("implement me")
 }
 
-func (m *OperatorMock) SetControlParameters(value *ControlParameters) error {
+func (m *OperatorMock) SetControlParameters(value *stats.ControlParameters) error {
 	args := m.Called(value)
 
 	return args.Error(0)

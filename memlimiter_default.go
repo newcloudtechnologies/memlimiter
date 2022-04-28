@@ -5,20 +5,16 @@ import (
 	"sync/atomic"
 
 	"github.com/go-logr/logr"
+	"github.com/newcloudtechnologies/memlimiter/stats"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-
-	servus_stats "gitlab.stageoffice.ru/UCS-COMMON/schemagen-go/v41/servus/stats/v1"
-
-	"github.com/pkg/errors"
-	"gitlab.stageoffice.ru/UCS-PLATFORM/servus"
-	"gitlab.stageoffice.ru/UCS-PLATFORM/servus/stats/aggregate"
 
 	"github.com/newcloudtechnologies/memlimiter/backpressure"
 	"github.com/newcloudtechnologies/memlimiter/controller"
 	"github.com/newcloudtechnologies/memlimiter/controller/nextgc"
 	"github.com/newcloudtechnologies/memlimiter/utils"
+	"github.com/pkg/errors"
 )
 
 // memLimiterImpl - система управления бюджетом оперативной памяти.
@@ -27,17 +23,17 @@ type memLimiterImpl struct {
 	backpressureOperator  backpressure.Operator
 	consumptionReporter   utils.ConsumptionReporter
 	applicationTerminator utils.ApplicationTerminator
-	statsSubscription     aggregate.Subscription
+	statsSubscription     stats.ServiceSubscription
 	logger                logr.Logger
 	cfg                   *Config
 }
 
-func (ml *memLimiterImpl) Init(ss servus.Servus) error {
+func (ml *memLimiterImpl) Init(statsSubscription stats.ServiceSubscription) error {
 	if c := ml.controller.Load(); c != nil {
 		return errors.New("memlimiter is already initialized")
 	}
 
-	ml.statsSubscription = ss.AggregatedStats().Subscribe()
+	ml.statsSubscription = statsSubscription
 
 	// NOTE: здесь должен появиться switch по типам при появлении иных типов контроллеров
 	c := nextgc.NewControllerFromConfig(
@@ -53,7 +49,7 @@ func (ml *memLimiterImpl) Init(ss servus.Servus) error {
 	return nil
 }
 
-func (ml *memLimiterImpl) getStats() (*servus_stats.GoMemLimiterStats, error) {
+func (ml *memLimiterImpl) getStats() (*stats.Memlimiter, error) {
 	c := ml.controller.Load()
 	if c == nil {
 		return nil, errors.New("memlimiter is not initialized yet")
@@ -66,7 +62,7 @@ func (ml *memLimiterImpl) getStats() (*servus_stats.GoMemLimiterStats, error) {
 
 	backpressureStats := ml.backpressureOperator.GetStats()
 
-	return &servus_stats.GoMemLimiterStats{
+	return &stats.Memlimiter{
 		Controller:   controllerStats,
 		Backpressure: backpressureStats,
 	}, nil

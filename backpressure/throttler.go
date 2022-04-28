@@ -3,19 +3,18 @@ package backpressure
 import (
 	"sync/atomic"
 
+	"github.com/newcloudtechnologies/memlimiter/stats"
+	"github.com/newcloudtechnologies/memlimiter/utils"
 	"github.com/villenny/fastrand64-go"
 
-	servus_stats "gitlab.stageoffice.ru/UCS-COMMON/schemagen-go/v41/servus/stats/v1"
-
 	"github.com/pkg/errors"
-	"gitlab.stageoffice.ru/UCS-PLATFORM/servus/stats/metrics"
 )
 
 type throttler struct {
 	// группа счётчиков запросов
-	requestsTotal     metrics.Counter
-	requestsPassed    metrics.Counter
-	requestsThrottled metrics.Counter
+	requestsTotal     utils.Counter
+	requestsPassed    utils.Counter
+	requestsThrottled utils.Counter
 
 	// для нас важно, чтобы ГСЧ:
 	// 1. выдавал равномерное распределение
@@ -46,8 +45,8 @@ func (t *throttler) setThreshold(value uint32) error {
 	return nil
 }
 
-func (t *throttler) getStats() *servus_stats.GoMemLimiterStats_BackpressureStats_ThrottlingStats {
-	return &servus_stats.GoMemLimiterStats_BackpressureStats_ThrottlingStats{
+func (t *throttler) getStats() *stats.Throttling {
+	return &stats.Throttling{
 		Total:     uint64(t.requestsTotal.Count()),
 		Passed:    uint64(t.requestsPassed.Count()),
 		Throttled: uint64(t.requestsThrottled.Count()),
@@ -80,12 +79,12 @@ func (t *throttler) AllowRequest() bool {
 }
 
 func newThrottler() *throttler {
-	requestsTotal := metrics.NewCounter(nil)
+	requestsTotal := utils.NewCounter(nil)
 
 	return &throttler{
 		rng:               fastrand64.NewSyncPoolXoshiro256ssRNG(),
 		requestsTotal:     requestsTotal,
-		requestsPassed:    metrics.NewCounter(requestsTotal),
-		requestsThrottled: metrics.NewCounter(requestsTotal),
+		requestsPassed:    utils.NewCounter(requestsTotal),
+		requestsThrottled: utils.NewCounter(requestsTotal),
 	}
 }

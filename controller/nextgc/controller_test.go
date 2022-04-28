@@ -7,15 +7,13 @@ import (
 
 	"code.cloudfoundry.org/bytefmt"
 	"github.com/go-logr/logr/testr"
-	servus_stats "gitlab.stageoffice.ru/UCS-COMMON/schemagen-go/v41/servus/stats/v1"
-
-	"github.com/newcloudtechnologies/memlimiter/utils/config/bytes"
-	"github.com/newcloudtechnologies/memlimiter/utils/config/duration"
-	"github.com/stretchr/testify/mock"
-	"gitlab.stageoffice.ru/UCS-PLATFORM/servus/stats/aggregate"
+	"github.com/newcloudtechnologies/memlimiter/stats"
 
 	"github.com/newcloudtechnologies/memlimiter/backpressure"
 	"github.com/newcloudtechnologies/memlimiter/utils"
+	"github.com/newcloudtechnologies/memlimiter/utils/config/bytes"
+	"github.com/newcloudtechnologies/memlimiter/utils/config/duration"
+	"github.com/stretchr/testify/mock"
 )
 
 func TestController(t *testing.T) {
@@ -40,34 +38,18 @@ func TestController(t *testing.T) {
 	}
 
 	// Первый вариант статистики описывает ситуацию, когда память близка к исчерпанию
-	memoryBudgetExhausted := &servus_stats.ServiceStats{
-		Process: &servus_stats.ProcessStats{
-			LanguageSpecific: &servus_stats.ProcessStats_Go{
-				Go: &servus_stats.GoRuntimeStats{
-					MemStats: &servus_stats.GoMemStats{
-						NextGc: 950 * bytefmt.MEGABYTE, // память потрачена на 95%
-					},
-				},
-			},
-		},
+	memoryBudgetExhausted := &stats.Service{
+		NextGC: 950 * bytefmt.MEGABYTE, // память потрачена на 95%
 	}
 
 	// Во втором варианте бюджет памяти возвращается в норму
-	memoryBudgetNormal := &servus_stats.ServiceStats{
-		Process: &servus_stats.ProcessStats{
-			LanguageSpecific: &servus_stats.ProcessStats_Go{
-				Go: &servus_stats.GoRuntimeStats{
-					MemStats: &servus_stats.GoMemStats{
-						NextGc: 300 * bytefmt.MEGABYTE, // память потрачена на 50%
-					},
-				},
-			},
-		},
+	memoryBudgetNormal := &stats.Service{
+		NextGC: 300 * bytefmt.MEGABYTE, // память потрачена на 50%
 	}
 
-	subscriptionMock := &aggregate.SubscriptionMock{}
-	updateChan := make(chan *servus_stats.ServiceStats)
-	subscriptionMock.On("Updates").Return((<-chan *servus_stats.ServiceStats)(updateChan)) //nolint:gocritic
+	subscriptionMock := &stats.ServiceSubscriptionMock{
+		Chan: make(chan *stats.Service),
+	}
 
 	// канал закрывается, когда backpressure.Operator получит все необходимые команды
 	terminateChan := make(chan struct{})
@@ -81,9 +63,9 @@ func TestController(t *testing.T) {
 		for {
 			select {
 			case <-ticker.C:
-				serviceStats, ok := serviceStatsContainer.Load().(*servus_stats.ServiceStats)
+				serviceStats, ok := serviceStatsContainer.Load().(*stats.Service)
 				if ok {
-					updateChan <- serviceStats
+					subscriptionMock.Chan <- serviceStats
 				}
 			case <-terminateChan:
 				return
@@ -98,7 +80,7 @@ func TestController(t *testing.T) {
 
 	backpressureOperatorMock.On(
 		"SetControlParameters",
-		&backpressure.ControlParameters{
+		&stats.ControlParameters{
 			GOGC:                 80,
 			ThrottlingPercentage: 20,
 		},
@@ -110,7 +92,7 @@ func TestController(t *testing.T) {
 		},
 	).On(
 		"SetControlParameters",
-		&backpressure.ControlParameters{
+		&stats.ControlParameters{
 			GOGC:                 100,
 			ThrottlingPercentage: 0,
 		},

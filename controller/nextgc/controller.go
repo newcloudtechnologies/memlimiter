@@ -5,11 +5,9 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
-	servus_stats "gitlab.stageoffice.ru/UCS-COMMON/schemagen-go/v41/servus/stats/v1"
-
+	"github.com/newcloudtechnologies/memlimiter/stats"
 	"github.com/newcloudtechnologies/memlimiter/utils/breaker"
 	"github.com/pkg/errors"
-	"gitlab.stageoffice.ru/UCS-PLATFORM/servus/stats/aggregate"
 
 	"github.com/newcloudtechnologies/memlimiter/backpressure"
 	"github.com/newcloudtechnologies/memlimiter/controller"
@@ -20,7 +18,7 @@ import (
 // https://confluence.ncloudtech.ru/pages/viewpage.action?pageId=102850263&src=contextnavpagetreemode
 //nolint:govet // структура создаётся в ед. экземпляре, сильно ни на что не влияет
 type controllerImpl struct {
-	input                 aggregate.Subscription                 // вход: поток оперативной статистики сервиса
+	input                 stats.ServiceSubscription              // вход: поток оперативной статистики сервиса
 	consumptionReporter   memlimiter_utils.ConsumptionReporter   // вход: информация о специализированных потребителях памяти
 	backpressureOperator  backpressure.Operator                  // выход: обрабатывает управляющие команды, выдаваемые регулятором
 	applicationTerminator memlimiter_utils.ApplicationTerminator // выход: аварийная остановка приложения
@@ -43,7 +41,7 @@ type controllerImpl struct {
 	goAllocLimit      uint64                              // акутальный бюджет памяти для Go [байты]
 	utilization       float64                             // актуальная утилизация бюджета памяти
 	consumptionReport *memlimiter_utils.ConsumptionReport // отчёт о потреблении памяти специальными потребителями
-	controlParameters *backpressure.ControlParameters     // значение управляющих параметров
+	controlParameters *stats.ControlParameters            // значение управляющих параметров
 
 	getStatsChan chan *getStatsRequest
 
@@ -53,15 +51,15 @@ type controllerImpl struct {
 }
 
 type getStatsRequest struct {
-	result chan *servus_stats.GoMemLimiterStats_ControllerStats
+	result chan *stats.Controller
 }
 
-func (r *getStatsRequest) respondWith(stats *servus_stats.GoMemLimiterStats_ControllerStats) {
-	r.result <- stats
+func (r *getStatsRequest) respondWith(resp *stats.Controller) {
+	r.result <- resp
 }
 
-func (c *controllerImpl) GetStats() (*servus_stats.GoMemLimiterStats_ControllerStats, error) {
-	req := &getStatsRequest{result: make(chan *servus_stats.GoMemLimiterStats_ControllerStats, 1)}
+func (c *controllerImpl) GetStats() (*stats.Controller, error) {
+	req := &getStatsRequest{result: make(chan *stats.Controller, 1)}
 
 	select {
 	case c.getStatsChan <- req:
@@ -115,7 +113,7 @@ func (c *controllerImpl) loop() {
 	}
 }
 
-func (c *controllerImpl) updateState(serviceStats *servus_stats.ServiceStats) error {
+func (c *controllerImpl) updateState(serviceStats *stats.Service) error {
 	// извлекаем оперативную информацию о спец. потребителях памяти, если она предоставляется клиентом
 	if c.consumptionReporter != nil {
 		var err error
@@ -137,7 +135,7 @@ func (c *controllerImpl) updateState(serviceStats *servus_stats.ServiceStats) er
 	return nil
 }
 
-func (c *controllerImpl) updateUtilization(serviceStats *servus_stats.ServiceStats) {
+func (c *controllerImpl) updateUtilization(serviceStats *stats.Service) {
 	// Чтобы понять, сколько памяти можно аллоцировать на нужды Go,
 	// требуется вычесть из общего лимита на RSS память, в явном виде потраченную в CGO.
 	// Иными словами, если аллокации в CGO будут расти, то аллокации в Go должны ужиматься.
@@ -151,8 +149,7 @@ func (c *controllerImpl) updateUtilization(serviceStats *servus_stats.ServiceSta
 
 	c.goAllocLimit = c.cfg.RSSLimit.Value - cgoAllocs
 
-	nextGC := serviceStats.Process.GetGo().MemStats.NextGc
-	c.utilization = float64(nextGC) / float64(c.goAllocLimit)
+	c.utilization = float64(serviceStats.NextGC) / float64(c.goAllocLimit)
 }
 
 func (c *controllerImpl) updateControlValues() error {
@@ -181,7 +178,7 @@ func (c *controllerImpl) updateControlValues() error {
 }
 
 func (c *controllerImpl) updateControlParameters() {
-	c.controlParameters = &backpressure.ControlParameters{}
+	c.controlParameters = &stats.ControlParameters{}
 	c.updateControlParameterGOGC()
 	c.updateControlParameterThrottling()
 }
@@ -228,23 +225,21 @@ func (c *controllerImpl) applyControlValue() error {
 	return nil
 }
 
-func (c *controllerImpl) aggregateStats() *servus_stats.GoMemLimiterStats_ControllerStats {
-	res := &servus_stats.GoMemLimiterStats_ControllerStats{
-		MemoryBudget: &servus_stats.GoMemLimiterStats_ControllerStats_MemoryBudget{
-			RssLimit:     c.cfg.RSSLimit.Value,
+func (c *controllerImpl) aggregateStats() *stats.Controller {
+	res := &stats.Controller{
+		MemoryBudget: &stats.MemoryBudget{
+			RSSLimit:     c.cfg.RSSLimit.Value,
 			GoAllocLimit: c.goAllocLimit,
 			Utilization:  c.utilization,
 		},
-		Controller: &servus_stats.GoMemLimiterStats_ControllerStats_NextGc{
-			NextGc: &servus_stats.GoMemLimiterStats_ControllerStats_ControllerNextGC{
-				P:      c.pValue,
-				Output: c.sumValue,
-			},
+		NextGC: &stats.ControllerNextGC{
+			P:      c.pValue,
+			Output: c.sumValue,
 		},
 	}
 
 	if c.consumptionReport != nil {
-		res.MemoryBudget.SpecialConsumers = &servus_stats.GoMemLimiterStats_ControllerStats_MemoryBudget_SpecialConsumers{}
+		res.MemoryBudget.SpecialConsumers = &stats.SpecialConsumers{}
 		res.MemoryBudget.SpecialConsumers.Go = c.consumptionReport.Go
 		res.MemoryBudget.SpecialConsumers.Cgo = c.consumptionReport.Cgo
 	}
@@ -262,7 +257,7 @@ func (c *controllerImpl) Quit() {
 func NewControllerFromConfig(
 	logger logr.Logger,
 	cfg *ControllerConfig,
-	input aggregate.Subscription,
+	input stats.ServiceSubscription,
 	consumptionReporter memlimiter_utils.ConsumptionReporter,
 	backpressureOperator backpressure.Operator,
 	applicationTerminator memlimiter_utils.ApplicationTerminator,

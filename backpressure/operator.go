@@ -5,8 +5,7 @@ import (
 	"sync/atomic"
 
 	"github.com/go-logr/logr"
-	servus_stats "gitlab.stageoffice.ru/UCS-COMMON/schemagen-go/v41/servus/stats/v1"
-
+	"github.com/newcloudtechnologies/memlimiter/stats"
 	"github.com/pkg/errors"
 )
 
@@ -18,24 +17,24 @@ type operatorImpl struct {
 	logger                logr.Logger
 }
 
-func (b *operatorImpl) GetStats() *servus_stats.GoMemLimiterStats_BackpressureStats {
-	result := &servus_stats.GoMemLimiterStats_BackpressureStats{
+func (b *operatorImpl) GetStats() *stats.Backpressure {
+	result := &stats.Backpressure{
 		Throttling: b.throttler.getStats(),
 	}
 
 	lastControlParameters := b.lastControlParameters.Load()
 	if lastControlParameters != nil {
-		result.ControlParameters = lastControlParameters.(*ControlParameters).ToProtobuf()
+		result.ControlParameters = lastControlParameters.(*stats.ControlParameters)
 	}
 
 	return result
 }
 
-func (b *operatorImpl) SetControlParameters(value *ControlParameters) error {
+func (b *operatorImpl) SetControlParameters(value *stats.ControlParameters) error {
 	old := b.lastControlParameters.Swap(value)
 	if old != nil {
 		// если управляющие параметры не изменились, ничего не делаем
-		if value.equalsTo(old.(*ControlParameters)) {
+		if value.EqualsTo(old.(*stats.ControlParameters)) {
 			return nil
 		}
 	}

@@ -5,9 +5,8 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/newcloudtechnologies/memlimiter/utils"
 	"github.com/stretchr/testify/require"
-
-	"gitlab.stageoffice.ru/UCS-PLATFORM/servus/stats/metrics"
 )
 
 func TestThrottler(t *testing.T) {
@@ -30,8 +29,8 @@ func TestThrottler(t *testing.T) {
 			wg := &sync.WaitGroup{}
 			wg.Add(requests)
 
-			failed := metrics.NewCounter(nil)
-			succeeded := metrics.NewCounter(nil)
+			failed := utils.NewCounter(nil)
+			succeeded := utils.NewCounter(nil)
 
 			for i := 0; i < requests; i++ {
 				go func() {
