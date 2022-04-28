@@ -9,6 +9,8 @@ import (
 type MemLimiter interface {
 	// Init ограничитель памяти инициализируется лениво из-за циклических связей с Servus
 	Init(serviceStatsSubscription stats.ServiceSubscription) error
+	//
+	GetStats() (*stats.Memlimiter, error)
 	// MakeUnaryServerInterceptor возвращает интерсептор для унарных запросов
 	MakeUnaryServerInterceptor() grpc.UnaryServerInterceptor
 	// MakeStreamServerInterceptor возвращает интерсептор для стримовых запросов

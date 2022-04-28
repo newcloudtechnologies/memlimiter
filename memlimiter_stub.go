@@ -12,6 +12,10 @@ type memLimiterStub struct {
 
 func (m memLimiterStub) Init(_ stats.ServiceSubscription) error { return nil }
 
+func (m memLimiterStub) GetStats() (*stats.Memlimiter, error) {
+	return nil, nil
+}
+
 func (m memLimiterStub) MakeUnaryServerInterceptor() grpc.UnaryServerInterceptor {
 	return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp interface{}, err error) {
 		return handler(ctx, req)

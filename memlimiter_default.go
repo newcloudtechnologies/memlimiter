@@ -49,7 +49,7 @@ func (ml *memLimiterImpl) Init(statsSubscription stats.ServiceSubscription) erro
 	return nil
 }
 
-func (ml *memLimiterImpl) getStats() (*stats.Memlimiter, error) {
+func (ml *memLimiterImpl) GetStats() (*stats.Memlimiter, error) {
 	c := ml.controller.Load()
 	if c == nil {
 		return nil, errors.New("memlimiter is not initialized yet")
