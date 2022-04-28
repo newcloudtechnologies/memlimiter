@@ -1,0 +1,19 @@
+{
+  "memlimiter": {
+    "controller_nextgc": {
+      "rss_limit": "1G",
+      "danger_zone_gogc": 50,
+      "danger_zone_throttling": 90,
+      "period": "1s",
+      "component_proportional": {
+        "coefficient": 20,
+        "window_size": 20
+      }
+    }
+  },
+  "listen_endpoint": "0.0.0.0:1988",
+  "tracker": {
+    "path": "/tmp/tracker.csv",
+    "period": "1s"
+  }
+}
