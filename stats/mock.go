@@ -4,7 +4,7 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
-var _ ServiceSubscription = (*ServiceSubscriptionMock)(nil)
+var _ Subscription = (*ServiceSubscriptionMock)(nil)
 
 type ServiceSubscriptionMock struct {
 	Chan chan *Service

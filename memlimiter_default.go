@@ -23,12 +23,12 @@ type memLimiterImpl struct {
 	backpressureOperator  backpressure.Operator
 	consumptionReporter   utils.ConsumptionReporter
 	applicationTerminator utils.ApplicationTerminator
-	statsSubscription     stats.ServiceSubscription
+	statsSubscription     stats.Subscription
 	logger                logr.Logger
 	cfg                   *Config
 }
 
-func (ml *memLimiterImpl) Init(statsSubscription stats.ServiceSubscription) error {
+func (ml *memLimiterImpl) Init(statsSubscription stats.Subscription) error {
 	if c := ml.controller.Load(); c != nil {
 		return errors.New("memlimiter is already initialized")
 	}

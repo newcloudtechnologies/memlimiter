@@ -10,7 +10,7 @@ import (
 type memLimiterStub struct {
 }
 
-func (m memLimiterStub) Init(_ stats.ServiceSubscription) error { return nil }
+func (m memLimiterStub) Init(_ stats.Subscription) error { return nil }
 
 func (m memLimiterStub) GetStats() (*stats.Memlimiter, error) {
 	return nil, nil
