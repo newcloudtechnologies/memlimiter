@@ -5,16 +5,16 @@ import (
 	"sync/atomic"
 
 	"github.com/go-logr/logr"
-	"github.com/newcloudtechnologies/memlimiter/stats"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
-
 	"github.com/newcloudtechnologies/memlimiter/backpressure"
 	"github.com/newcloudtechnologies/memlimiter/controller"
 	"github.com/newcloudtechnologies/memlimiter/controller/nextgc"
+	"github.com/newcloudtechnologies/memlimiter/stats"
 	"github.com/newcloudtechnologies/memlimiter/utils"
+	"github.com/newcloudtechnologies/memlimiter/utils/config/prepare"
 	"github.com/pkg/errors"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 // memLimiterImpl - система управления бюджетом оперативной памяти.
@@ -23,12 +23,12 @@ type memLimiterImpl struct {
 	backpressureOperator  backpressure.Operator
 	consumptionReporter   utils.ConsumptionReporter
 	applicationTerminator utils.ApplicationTerminator
-	statsSubscription     stats.ServiceSubscription
+	statsSubscription     stats.Subscription
 	logger                logr.Logger
 	cfg                   *Config
 }
 
-func (ml *memLimiterImpl) Init(statsSubscription stats.ServiceSubscription) error {
+func (ml *memLimiterImpl) Init(statsSubscription stats.Subscription) error {
 	if c := ml.controller.Load(); c != nil {
 		return errors.New("memlimiter is already initialized")
 	}
@@ -128,6 +128,10 @@ func newMemLimiterDefault(
 	applicationTerminator utils.ApplicationTerminator, // обязательный
 	consumptionReporter utils.ConsumptionReporter, // опциональный
 ) (MemLimiter, error) {
+	if err := prepare.Prepare(cfg); err != nil {
+		return nil, errors.Wrap(err, "prepare config")
+	}
+
 	if applicationTerminator == nil {
 		return nil, errors.New("nil application terminator passed")
 	}

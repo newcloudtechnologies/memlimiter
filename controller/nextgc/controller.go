@@ -18,7 +18,7 @@ import (
 // https://confluence.ncloudtech.ru/pages/viewpage.action?pageId=102850263&src=contextnavpagetreemode
 //nolint:govet // структура создаётся в ед. экземпляре, сильно ни на что не влияет
 type controllerImpl struct {
-	input                 stats.ServiceSubscription              // вход: поток оперативной статистики сервиса
+	input                 stats.Subscription                     // вход: поток оперативной статистики сервиса
 	consumptionReporter   memlimiter_utils.ConsumptionReporter   // вход: информация о специализированных потребителях памяти
 	backpressureOperator  backpressure.Operator                  // выход: обрабатывает управляющие команды, выдаваемые регулятором
 	applicationTerminator memlimiter_utils.ApplicationTerminator // выход: аварийная остановка приложения
@@ -118,7 +118,7 @@ func (c *controllerImpl) updateState(serviceStats *stats.Service) error {
 	if c.consumptionReporter != nil {
 		var err error
 
-		c.consumptionReport, err = c.consumptionReporter.PredefinedConsumers(serviceStats)
+		c.consumptionReport, err = c.consumptionReporter.PredefinedConsumers(serviceStats.Custom)
 		if err != nil {
 			return errors.Wrap(err, "predefined consumers")
 		}
@@ -257,7 +257,7 @@ func (c *controllerImpl) Quit() {
 func NewControllerFromConfig(
 	logger logr.Logger,
 	cfg *ControllerConfig,
-	input stats.ServiceSubscription,
+	input stats.Subscription,
 	consumptionReporter memlimiter_utils.ConsumptionReporter,
 	backpressureOperator backpressure.Operator,
 	applicationTerminator memlimiter_utils.ApplicationTerminator,

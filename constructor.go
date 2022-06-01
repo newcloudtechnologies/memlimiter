@@ -12,10 +12,5 @@ func NewMemLimiterFromConfig(
 	applicationTerminator utils.ApplicationTerminator,
 	consumptionReporter utils.ConsumptionReporter,
 ) (MemLimiter, error) {
-	if cfg == nil {
-		// передача nil конфига означает, что MemLimiter отключён, и вместо него будет заглушка
-		return &memLimiterStub{}, nil
-	}
-
 	return newMemLimiterDefault(logger, cfg, applicationTerminator, consumptionReporter)
 }

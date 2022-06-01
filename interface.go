@@ -7,9 +7,6 @@ import (
 
 // MemLimiter - верхнеуровневый интерфейс системы управления бюджетом оперативной памяти.
 type MemLimiter interface {
-	// Init ограничитель памяти инициализируется лениво из-за циклических связей с Servus
-	Init(serviceStatsSubscription stats.ServiceSubscription) error
-	//
 	GetStats() (*stats.Memlimiter, error)
 	// MakeUnaryServerInterceptor возвращает интерсептор для унарных запросов
 	MakeUnaryServerInterceptor() grpc.UnaryServerInterceptor

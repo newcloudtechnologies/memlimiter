@@ -2,10 +2,11 @@ package stats
 
 type Service struct {
 	NextGC uint64
+	Custom interface{}
 }
 
-// ServiceSubscription - интерфейс подписки на оперативную статистику
-type ServiceSubscription interface {
+// Subscription - интерфейс подписки на оперативную статистику
+type Subscription interface {
 	Updates() <-chan *Service
 	Quit()
 }
