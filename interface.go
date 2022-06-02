@@ -5,8 +5,8 @@ import (
 	"google.golang.org/grpc"
 )
 
-// MemLimiter - верхнеуровневый интерфейс системы управления бюджетом оперативной памяти.
-type MemLimiter interface {
+// Service - верхнеуровневый интерфейс системы управления бюджетом оперативной памяти.
+type Service interface {
 	GetStats() (*stats.Memlimiter, error)
 	// MakeUnaryServerInterceptor возвращает интерсептор для унарных запросов
 	MakeUnaryServerInterceptor() grpc.UnaryServerInterceptor
