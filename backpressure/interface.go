@@ -20,5 +20,5 @@ type Operator interface {
 	// AllowRequest используется интерсепторами запросов для подавления части запросов во время пиковых нагрузок.
 	AllowRequest() bool
 	// GetStats возвращает статистику подсистемы backpressure
-	GetStats() *stats.Backpressure
+	GetStats() *stats.BackpressureStats
 }

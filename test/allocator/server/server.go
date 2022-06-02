@@ -8,6 +8,7 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/newcloudtechnologies/memlimiter"
+	"github.com/newcloudtechnologies/memlimiter/stats"
 	"github.com/newcloudtechnologies/memlimiter/utils"
 	"github.com/newcloudtechnologies/memlimiter/utils/config/prepare"
 	"google.golang.org/grpc"
@@ -95,7 +96,7 @@ func NewAllocatorServer(logger logr.Logger, cfg *Config) (Server, error) {
 		logger,
 		cfg.MemLimiter,
 		utils.NewUngracefulApplicationTerminator(logger),
-		nil,
+		stats.NewSubscriptionDefault(time.Second),
 		nil,
 	)
 

@@ -4,39 +4,39 @@ import (
 	"fmt"
 )
 
-type Memlimiter struct {
-	Controller   *Controller
-	Backpressure *Backpressure
+type MemlimiterStats struct {
+	Controller   *ControllerStats
+	Backpressure *BackpressureStats
 }
 
-type Controller struct {
-	MemoryBudget *MemoryBudget
-	NextGC       *ControllerNextGC
+type ControllerStats struct {
+	MemoryBudget *MemoryBudgetStats
+	NextGC       *ControllerNextGCStats
 }
 
-type MemoryBudget struct {
+type MemoryBudgetStats struct {
 	RSSLimit         uint64
 	GoAllocLimit     uint64
 	Utilization      float64
-	SpecialConsumers *SpecialConsumers
+	SpecialConsumers *SpecialConsumersStats
 }
 
-type SpecialConsumers struct {
+type SpecialConsumersStats struct {
 	Go  map[string]uint64
 	Cgo map[string]uint64
 }
 
-type ControllerNextGC struct {
+type ControllerNextGCStats struct {
 	P      float64
 	Output float64
 }
 
-type Backpressure struct {
-	Throttling        *Throttling
+type BackpressureStats struct {
+	Throttling        *ThrottlingStats
 	ControlParameters *ControlParameters
 }
 
-type Throttling struct {
+type ThrottlingStats struct {
 	Total     uint64
 	Passed    uint64
 	Throttled uint64

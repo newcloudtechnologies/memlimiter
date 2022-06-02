@@ -6,6 +6,6 @@ import (
 
 // Controller - обобщённый интерфейс регулятора.
 type Controller interface {
-	GetStats() (*stats.Controller, error)
+	GetStats() (*stats.ControllerStats, error)
 	Quit()
 }

@@ -45,8 +45,8 @@ func (t *throttler) setThreshold(value uint32) error {
 	return nil
 }
 
-func (t *throttler) getStats() *stats.Throttling {
-	return &stats.Throttling{
+func (t *throttler) getStats() *stats.ThrottlingStats {
+	return &stats.ThrottlingStats{
 		Total:     uint64(t.requestsTotal.Count()),
 		Passed:    uint64(t.requestsPassed.Count()),
 		Throttled: uint64(t.requestsThrottled.Count()),

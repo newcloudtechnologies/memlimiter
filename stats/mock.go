@@ -7,11 +7,11 @@ import (
 var _ Subscription = (*ServiceSubscriptionMock)(nil)
 
 type ServiceSubscriptionMock struct {
-	Chan chan *Service
+	Chan chan *ServiceStats
 	mock.Mock
 }
 
-func (m *ServiceSubscriptionMock) Updates() <-chan *Service {
+func (m *ServiceSubscriptionMock) Updates() <-chan *ServiceStats {
 	return m.Chan
 }
 

@@ -17,8 +17,8 @@ type operatorImpl struct {
 	logger                logr.Logger
 }
 
-func (b *operatorImpl) GetStats() *stats.Backpressure {
-	result := &stats.Backpressure{
+func (b *operatorImpl) GetStats() *stats.BackpressureStats {
+	result := &stats.BackpressureStats{
 		Throttling: b.throttler.getStats(),
 	}
 
