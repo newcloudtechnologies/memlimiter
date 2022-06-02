@@ -2,7 +2,6 @@ package memlimiter
 
 import (
 	"context"
-	"sync/atomic"
 
 	"github.com/go-logr/logr"
 	"github.com/newcloudtechnologies/memlimiter/backpressure"
@@ -17,45 +16,18 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+var _ MemLimiter = (*memLimiterImpl)(nil)
+
 // memLimiterImpl - система управления бюджетом оперативной памяти.
 type memLimiterImpl struct {
-	controller            atomic.Value // в связи с ленивой инициализацией
-	backpressureOperator  backpressure.Operator
-	consumptionReporter   utils.ConsumptionReporter
-	applicationTerminator utils.ApplicationTerminator
-	statsSubscription     stats.Subscription
-	logger                logr.Logger
-	cfg                   *Config
-}
-
-func (ml *memLimiterImpl) Init(statsSubscription stats.Subscription) error {
-	if c := ml.controller.Load(); c != nil {
-		return errors.New("memlimiter is already initialized")
-	}
-
-	ml.statsSubscription = statsSubscription
-
-	// NOTE: здесь должен появиться switch по типам при появлении иных типов контроллеров
-	c := nextgc.NewControllerFromConfig(
-		ml.logger,
-		ml.cfg.ControllerNextGC,
-		ml.statsSubscription,
-		ml.consumptionReporter,
-		ml.backpressureOperator,
-		ml.applicationTerminator,
-	)
-	ml.controller.Store(c)
-
-	return nil
+	backpressureOperator backpressure.Operator
+	statsSubscription    stats.Subscription
+	controller           controller.Controller
+	logger               logr.Logger
 }
 
 func (ml *memLimiterImpl) GetStats() (*stats.Memlimiter, error) {
-	c := ml.controller.Load()
-	if c == nil {
-		return nil, errors.New("memlimiter is not initialized yet")
-	}
-
-	controllerStats, err := c.(controller.Controller).GetStats()
+	controllerStats, err := ml.controller.GetStats()
 	if err != nil {
 		return nil, errors.Wrap(err, "controller get stats")
 	}
@@ -113,19 +85,15 @@ func (ml *memLimiterImpl) MakeStreamServerInterceptor() grpc.StreamServerInterce
 
 // Quit корректно завершает работу.
 func (ml *memLimiterImpl) Quit() {
-	c := ml.controller.Load()
-	if c == nil {
-		return
-	}
-
-	c.(controller.Controller).Quit()
+	ml.controller.Quit()
 	ml.statsSubscription.Quit()
 }
 
-func newMemLimiterDefault(
+func NewMemLimiterFromConfig(
 	logger logr.Logger, // обязательный
 	cfg *Config, // обязательный
 	applicationTerminator utils.ApplicationTerminator, // обязательный
+	statsSubscription stats.Subscription, // mandatory
 	consumptionReporter utils.ConsumptionReporter, // опциональный
 ) (MemLimiter, error) {
 	if err := prepare.Prepare(cfg); err != nil {
@@ -136,13 +104,25 @@ func newMemLimiterDefault(
 		return nil, errors.New("nil application terminator passed")
 	}
 
+	if statsSubscription == nil {
+		return nil, errors.New("nil stats subscription passed")
+	}
+
 	backpressureOperator := backpressure.NewOperator(logger)
 
+	c := nextgc.NewControllerFromConfig(
+		logger,
+		cfg.ControllerNextGC,
+		statsSubscription,
+		consumptionReporter,
+		backpressureOperator,
+		applicationTerminator,
+	)
+
 	return &memLimiterImpl{
-		cfg:                   cfg,
-		consumptionReporter:   consumptionReporter,
-		backpressureOperator:  backpressureOperator,
-		applicationTerminator: applicationTerminator,
-		logger:                logger,
+		backpressureOperator: backpressureOperator,
+		statsSubscription:    statsSubscription,
+		controller:           c,
+		logger:               logger,
 	}, nil
 }
