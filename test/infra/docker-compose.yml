@@ -1,0 +1,40 @@
+version: "3.3"
+services:
+  hydra:
+    network_mode: host
+    volumes:
+      - ${PWD}/hydra:/etc/ucs/hydra
+    image: hub.stageoffice.ru/hydra
+  devkalion:
+    network_mode: host
+    volumes:
+      - ${PWD}/devkalion:/etc/ucs/devkalion
+    image: hub.stageoffice.ru/devkalion
+  gesiona:
+    network_mode: host
+    volumes:
+      - ${PWD}/gesiona:/etc/ucs/gesiona
+      - ${PWD}/targets:/var/lib/targets
+    image: hub.stageoffice.ru/gesiona
+  prometheus:
+    network_mode: host
+    volumes:
+      - ${PWD}/prometheus:/etc/prometheus
+      - ${PWD}/targets:/var/lib/targets
+    image: prom/prometheus
+  grafana:
+    network_mode: host
+    volumes:
+      - ${PWD}/grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards
+      - ${PWD}/grafana/provisioning/datasources:/etc/grafana/provisioning/datasources
+      - ${GOPATH}/src/gitlab.stageoffice.ru/mdc-devops/ansible_collections/nct.monitoring/roles/grafana/files:/var/lib/grafana/dashboards
+    image: grafana/grafana:7.5.10
+  allocator:
+    build: ${PWD}/allocator
+    network_mode: host
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+    volumes:
+      - ${PWD}/allocator:/etc/ucs/allocator
