@@ -52,7 +52,7 @@ func main() {
 						Required: true,
 					},
 				},
-				Action: actionPerf,
+				Action: func(context *cli.Context) error { return actionPerf(logger, context) },
 			},
 		},
 	}
@@ -98,8 +98,8 @@ func makeServer(logger logr.Logger, c *cli.Context) (server.Server, error) {
 	return srv, nil
 }
 
-func actionPerf(c *cli.Context) error {
-	perfClient, err := makePerf(c)
+func actionPerf(logger logr.Logger, c *cli.Context) error {
+	perfClient, err := makePerf(logger, c)
 	if err != nil {
 		return errors.Wrap(err, "make perf")
 	}
@@ -111,7 +111,7 @@ func actionPerf(c *cli.Context) error {
 	return nil
 }
 
-func makePerf(c *cli.Context) (*perf.Client, error) {
+func makePerf(logger logr.Logger, c *cli.Context) (*perf.Client, error) {
 	filename := c.String("config")
 
 	data, err := ioutil.ReadFile(filepath.Clean(filename))
@@ -125,7 +125,7 @@ func makePerf(c *cli.Context) (*perf.Client, error) {
 		return nil, errors.Wrap(err, "unmarshal")
 	}
 
-	srv, err := perf.NewClient(cfg)
+	srv, err := perf.NewClient(logger, cfg)
 	if err != nil {
 		return nil, errors.Wrap(err, "new allocator server")
 	}

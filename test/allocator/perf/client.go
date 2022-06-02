@@ -110,18 +110,10 @@ func (p *Client) Quit() {
 }
 
 // NewClient создаёт нагрузочный клиент.
-func NewClient(cfg *Config) (*Client, error) {
+func NewClient(logger logr.Logger, cfg *Config) (*Client, error) {
 	if err := prepare.Prepare(cfg); err != nil {
 		return nil, errors.Wrap(err, "configs prepare")
 	}
-
-	// FIXME:
-	/*
-		logger, err := gaben.FromConfig(cfg.Logging)
-		if err != nil {
-			return nil, errors.Wrap(err, "gaben from config")
-		}
-	*/
 
 	grpcConn, err := grpc.Dial(cfg.Endpoint, grpc.WithInsecure())
 	if err != nil {
@@ -132,7 +124,7 @@ func NewClient(cfg *Config) (*Client, error) {
 
 	return &Client{
 		grpcConn:         grpcConn,
-		logger:           logr.Logger{}, // FIXME
+		logger:           logger,
 		client:           client,
 		startTime:        time.Now(),
 		cfg:              cfg,
