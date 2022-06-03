@@ -24,6 +24,10 @@ type Server interface {
 	Run() error
 	// Quit корректное завершение работы сервера.
 	Quit()
+	// GRPCServer returns underlying server implementation. Only for test purposes.
+	GRPCServer() *grpc.Server
+	// MemLimiter returns underlying memlimiter implementation. Only for test purposes.
+	MemLimiter() memlimiter.Service
 }
 
 var _ Server = (*serverImpl)(nil)
@@ -33,6 +37,7 @@ type serverImpl struct {
 	cfg        *Config
 	logger     logr.Logger
 	grpcServer *grpc.Server
+	ml         memlimiter.Service
 }
 
 func (srv *serverImpl) MakeAllocation(_ context.Context, request *schema.MakeAllocationRequest) (*schema.MakeAllocationResponse, error) {
@@ -79,18 +84,20 @@ func (srv *serverImpl) Run() error {
 	return nil
 }
 
+func (srv *serverImpl) GRPCServer() *grpc.Server { return srv.grpcServer }
+
+func (srv *serverImpl) MemLimiter() memlimiter.Service { return srv.ml }
+
 func (srv *serverImpl) Quit() {
 	srv.logger.Info("terminating server")
 	srv.grpcServer.Stop()
 }
 
 // NewAllocatorServer - конструктор сервера.
-func NewAllocatorServer(logger logr.Logger, cfg *Config) (Server, error) {
+func NewAllocatorServer(logger logr.Logger, cfg *Config, options ...grpc.ServerOption) (Server, error) {
 	if err := prepare.Prepare(cfg); err != nil {
 		return nil, errors.Wrap(err, "configs prepare")
 	}
-
-	srv := &serverImpl{logger: logger, cfg: cfg}
 
 	ml, err := memlimiter.NewServiceFromConfig(
 		logger,
@@ -104,12 +111,17 @@ func NewAllocatorServer(logger logr.Logger, cfg *Config) (Server, error) {
 		return nil, errors.Wrap(err, "new memlimiter from config")
 	}
 
-	options := []grpc.ServerOption{
+	options = append(options,
 		grpc.UnaryInterceptor(ml.MakeUnaryServerInterceptor()),
 		grpc.StreamInterceptor(ml.MakeStreamServerInterceptor()),
-	}
+	)
 
-	srv.grpcServer = grpc.NewServer(options...)
+	srv := &serverImpl{
+		logger:     logger,
+		cfg:        cfg,
+		ml:         ml,
+		grpcServer: grpc.NewServer(options...),
+	}
 
 	schema.RegisterAllocatorServer(srv.grpcServer, srv)
 
