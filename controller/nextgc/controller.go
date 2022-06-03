@@ -14,8 +14,7 @@ import (
 	memlimiter_utils "github.com/newcloudtechnologies/memlimiter/utils"
 )
 
-// controllerImpl - ПД-регулятор, описанный в
-// https://confluence.ncloudtech.ru/pages/viewpage.action?pageId=102850263&src=contextnavpagetreemode
+// controllerImpl - ПД-регулятор
 //nolint:govet // структура создаётся в ед. экземпляре, сильно ни на что не влияет
 type controllerImpl struct {
 	input                 stats.Subscription                     // вход: поток оперативной статистики сервиса

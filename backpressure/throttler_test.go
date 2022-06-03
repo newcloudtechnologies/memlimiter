@@ -81,14 +81,16 @@ func TestThrottler(t *testing.T) {
 }
 
 /*
-$ go test -bench=. -benchtime=10s ./utils/memlimiter/backpressure
+go test -bench=. -benchtime=10s ./backpressure
 goos: linux
-goarch: amd64
-pkg: gitlab.stageoffice.ru/UCS-PLATFORM/dispersed-object-store/v4/utils/memlimiter/backpressure
-cpu: 11th Gen Intel(R) Core(TM) i7-1165G7 @ 2.80GHz
-BenchmarkThrottler/throttling_level_=_0-8         	   52140	    227815 ns/op
-BenchmarkThrottler/throttling_level_=_50-8        	   52014	    228290 ns/op
-BenchmarkThrottler/throttling_level_=_100-8       	   51867	    284538 ns/op.
+goarch: amd64              consumption_reporter.go    doc.go                     mock.go
+pkg: github.com/newcloudtechnologies/memlimiter/backpressure
+cpu: AMD Ryzen 7 2700X Eight-Core Processor
+BenchmarkThrottler/throttling_level_=_0-16                 22977            542772 ns/op
+BenchmarkThrottler/throttling_level_=_50-16                22722            508701 ns/op
+BenchmarkThrottler/throttling_level_=_100-16               22220            488162 ns/op
+PASS
+ok      github.com/newcloudtechnologies/memlimiter/backpressure 57.747s
 */
 func BenchmarkThrottler(b *testing.B) {
 	const requests = 1000
