@@ -1,4 +1,3 @@
 .idea
-test/allocator/ucs-allocator
 test/infra/allocator/config.json
-test/infra/allocator/ucs-allocator
+test/allocator/allocator
