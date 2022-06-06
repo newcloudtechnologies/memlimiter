@@ -14,33 +14,29 @@ import (
 	memlimiter_utils "github.com/newcloudtechnologies/memlimiter/utils"
 )
 
-// controllerImpl - ПД-регулятор
-//nolint:govet // структура создаётся в ед. экземпляре, сильно ни на что не влияет
+// controllerImpl - in some early versions this class was designed to be used as a classical PID-controller
+// described in control theory. But currently it has only proportional (P) component, and the proportionality
+// is non-linear (see component_p.go). It looks like integral (I) component will never be implemented.
+// But the differential controller (D) still may be implemented in future if we face self-oscillation.
+//
+//nolint:govet
 type controllerImpl struct {
-	input                 stats.Subscription                     // вход: поток оперативной статистики сервиса
-	consumptionReporter   memlimiter_utils.ConsumptionReporter   // вход: информация о специализированных потребителях памяти
-	backpressureOperator  backpressure.Operator                  // выход: обрабатывает управляющие команды, выдаваемые регулятором
-	applicationTerminator memlimiter_utils.ApplicationTerminator // выход: аварийная остановка приложения
+	input                 stats.Subscription                     // input: service stats subscription.
+	consumptionReporter   memlimiter_utils.ConsumptionReporter   // input: information about special memory consumers.
+	backpressureOperator  backpressure.Operator                  // output: write control parameters here
+	applicationTerminator memlimiter_utils.ApplicationTerminator // output: used in case of emergency stop
 
-	// компоненты регулятора
-	//
-	// NOTE: На определённом этапе планировалось сделать полноценный ПИД-регулятор, но в итоге вышел
-	// не совсем обычный ПД-регулятор. В пропорциональной составляющей заложена
-	// не прямая, а обратная пропорциональность, а интегральная и дифференциальная составляющие отсутствуют.
-	// Интегральной, видимо, не будет никогда, а дифференциальную нужно будет доработать,
-	// если в системе будут наблюдаться проблемы с автоколебаниями.
+	// Controller components:
+	// 1. proportional component.
 	componentP *componentP
 
-	// закешированные значения, описывающее актуальное состояние ПИД-регулятора
-	//
-	// NOTE: см. замечание выше
-	pValue   float64 // значение, выданное пропорциональным компонентом
-	sumValue float64 // итоговое значение управляющего сигнала
-
-	goAllocLimit      uint64                              // акутальный бюджет памяти для Go [байты]
-	utilization       float64                             // актуальная утилизация бюджета памяти
-	consumptionReport *memlimiter_utils.ConsumptionReport // отчёт о потреблении памяти специальными потребителями
-	controlParameters *stats.ControlParameters            // значение управляющих параметров
+	// cached values, describing the actual state of the controller:
+	pValue            float64                             // proportional component's output
+	sumValue          float64                             // final output
+	goAllocLimit      uint64                              // memory budget [bytes]
+	utilization       float64                             // memory budget utilization [percents]
+	consumptionReport *memlimiter_utils.ConsumptionReport // latest special memory consumers report
+	controlParameters *stats.ControlParameters            // latest control parameters value
 
 	getStatsChan chan *getStatsRequest
 
@@ -83,23 +79,21 @@ func (c *controllerImpl) loop() {
 	for {
 		select {
 		case serviceStats := <-c.input.Updates():
-			// обновление состояния осуществляется при каждом поступлении статистики от Сервуса
+			// Update controller state every time we receive the actual stats about the process.
 			if err := c.updateState(serviceStats); err != nil {
 				c.logger.Error(err, "update state")
-				// невозможность вычислить контрольные параметры - фатальная ошибка;
-				// завершаем приложение через побочный эффект
+				// Impossibility to compute control parameters is a fatal error,
+				// terminate app using side-effect.
 				c.applicationTerminator.Terminate(err)
 
 				return
 			}
 		case <-ticker.C:
-			// а вот отправка управляющего сигнала выполняется с периодичностью, независящей от Сервуса;
-			// клиент обязан сам убедиться, что период отправки управляющего сигнала больше либо равен периоду отправки статистики Сервусом,
-			// иначе один и тот же сигнал будет высылаться несколько раз
+			// Generate control parameters based on the most recent state and send it to the backpressure operator.
 			if err := c.applyControlValue(); err != nil {
 				c.logger.Error(err, "apply control value")
-				// невозможность применить контрольные параметры - фатальная ошибка;
-				// завершаем приложение через побочный эффект
+				// Impossibility to apply control parameters is a fatal error,
+				// terminate app using side-effect.
 				c.applicationTerminator.Terminate(err)
 
 				return
@@ -113,7 +107,7 @@ func (c *controllerImpl) loop() {
 }
 
 func (c *controllerImpl) updateState(serviceStats *stats.ServiceStats) error {
-	// извлекаем оперативную информацию о спец. потребителях памяти, если она предоставляется клиентом
+	// Extract latest report on special memory consumers if any.
 	if c.consumptionReporter != nil {
 		var err error
 
@@ -135,6 +129,7 @@ func (c *controllerImpl) updateState(serviceStats *stats.ServiceStats) error {
 }
 
 func (c *controllerImpl) updateUtilization(serviceStats *stats.ServiceStats) {
+	// To figure out, how much memory can be used in Go.
 	// Чтобы понять, сколько памяти можно аллоцировать на нужды Go,
 	// требуется вычесть из общего лимита на RSS память, в явном виде потраченную в CGO.
 	// Иными словами, если аллокации в CGO будут расти, то аллокации в Go должны ужиматься.

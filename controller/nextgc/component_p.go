@@ -40,11 +40,8 @@ func (c *componentP) valueRaw(memoryUsage float64) (float64, error) {
 	}
 
 	if memoryUsage >= 1 {
-		// In theory, values >= 1 cannot be reached, but in practice sometimes we face
-		// with sim
-		// NOTE:
-		// Теоретически значения >= 1 недостижимы, но на практике встречаются ситуации с небольшим преувеличением лимита (< 1.1),
-		// во всяком случае, встречались раньше, когда MemLimiter таргетировал не RSS utilization, a Memory Budget utilization.
+		// In theory, values >= 1 are impossible, but in practice sometimes we face small exceeding of the upper bound (< 1.1).
+		// This needs to be investigated later.
 		const maxReasonableOutput = 100
 
 		c.logger.Info(
@@ -56,6 +53,7 @@ func (c *componentP) valueRaw(memoryUsage float64) (float64, error) {
 		return maxReasonableOutput, nil
 	}
 
+	// The closer the memory usage value is to 100%, the stronger the control signal.
 	return c.cfg.Coefficient * (1 / (1 - memoryUsage)), nil
 }
 
@@ -65,11 +63,9 @@ func (c *componentP) valueEMA(memoryUsage float64) (float64, error) {
 		return 0, errors.Wrap(err, "value raw")
 	}
 
-	// Эта либа работает только с интами, искать лучшую пока нет времени
+	// TODO: need to find statistical library working with floats to make this conversion unnecessary
 	const reductionFactor = 100
-
 	c.lastValues.Update(int64(valueRaw * reductionFactor))
-
 	return c.lastValues.Mean() / reductionFactor, nil
 }
 
@@ -80,10 +76,10 @@ func newComponentP(logger logr.Logger, cfg *ComponentProportionalConfig) *compon
 	}
 
 	if cfg.WindowSize != 0 {
-		// alpha - сглаживающая константа, чем она меньше, тем больше влияние исторических величин
-		// на итоговое значение. Выбирается эмпирически, но можно связать с окном осреднения,
-		// я взял формулу отсюда:
-		// https://ru.wikipedia.org/wiki/%D0%A1%D0%BA%D0%BE%D0%BB%D1%8C%D0%B7%D1%8F%D1%89%D0%B0%D1%8F_%D1%81%D1%80%D0%B5%D0%B4%D0%BD%D1%8F%D1%8F
+		// alpha is a smoothing coefficient describing the degree of weighting decrease;
+		// the lesser the alpha is, the higher the impact of the elder historical values on the resulting value.
+		// alpha is choosed empirically, but can depend on a window size, like here:
+		// https://en.wikipedia.org/wiki/Moving_average#Relationship_between_SMA_and_EMA
 		//nolint:gomnd
 		alpha := 2 / (float64(cfg.WindowSize + 1))
 
