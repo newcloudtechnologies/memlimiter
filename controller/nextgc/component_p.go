@@ -9,7 +9,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-// пропорциональный компонент PD-контроллера.
+// The proportional component of the controller.
 type componentP struct {
 	logger     logr.Logger
 	lastValues metrics.Sample
@@ -40,6 +40,8 @@ func (c *componentP) valueRaw(memoryUsage float64) (float64, error) {
 	}
 
 	if memoryUsage >= 1 {
+		// In theory, values >= 1 cannot be reached, but in practice sometimes we face
+		// with sim
 		// NOTE:
 		// Теоретически значения >= 1 недостижимы, но на практике встречаются ситуации с небольшим преувеличением лимита (< 1.1),
 		// во всяком случае, встречались раньше, когда MemLimiter таргетировал не RSS utilization, a Memory Budget utilization.

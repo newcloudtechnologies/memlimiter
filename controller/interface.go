@@ -4,7 +4,7 @@ import (
 	"github.com/newcloudtechnologies/memlimiter/stats"
 )
 
-// Controller - обобщённый интерфейс регулятора.
+// Controller - generic memory consumption controller interface
 type Controller interface {
 	GetStats() (*stats.ControllerStats, error)
 	Quit()

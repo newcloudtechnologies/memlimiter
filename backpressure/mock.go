@@ -12,7 +12,6 @@ type OperatorMock struct {
 }
 
 func (m *OperatorMock) GetStats() *stats.BackpressureStats {
-	// TODO implement me
 	panic("implement me")
 }
 
@@ -23,6 +22,5 @@ func (m *OperatorMock) SetControlParameters(value *stats.ControlParameters) erro
 }
 
 func (m *OperatorMock) AllowRequest() bool {
-	// TODO implement me
 	panic("implement me")
 }
