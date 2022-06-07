@@ -6,14 +6,16 @@ import (
 	"github.com/newcloudtechnologies/memlimiter/controller/nextgc"
 )
 
-// Config - высокоуровневая конфигурация ограничителя потребления памяти.
+// Config - high-level MemLimiter config.
 type Config struct {
-	// TODO: при появлении новых имплементаций добавлять их сюда, в Prepare реализовать вариативность выбора
-	// ControllerNextGC - настройки регулятора, управляющего бюджетом памяти
+	// ControllerNextGC - NextGC-based controller
 	ControllerNextGC *nextgc.ControllerConfig `json:"controller_nextgc"` //nolint:tagliatelle
+	// TODO:
+	//  if new controller implementation appears, put its config here and make switch in Prepare()
+	//  (only one subsection must be not nil).
 }
 
-// Prepare - валидатор конфига.
+// Prepare validates config.
 func (c *Config) Prepare() error {
 	if c.ControllerNextGC == nil {
 		return errors.New("empty ControllerNextGC")

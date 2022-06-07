@@ -264,7 +264,7 @@ linters:
   enable-all: true
   fast: false
   disable:
-    - promlinter       # много багов
+    - promlinter       # to many bugs
     - gci              # ucs-fmt противоречит gci (скорее всего)
     - godox            # мы пока не готовы к этому
     - goerr113         # использование errors противоречит этому правилу
@@ -284,7 +284,6 @@ issues:
 
   # Excluding configuration per-path, per-linter, per-text and per-source
   exclude-rules:
-    # в юнит-тестах трудно писать идеальный код, хотя некоторые исключения вызывают вопросы
     - path: _test\.go
       linters:
         - gocyclo
@@ -294,37 +293,18 @@ issues:
         - gocognit
         - gomnd
 
-    # в компонетных тестах ситуация чуть лучше
     - path: "test_.*\\.go$"
       linters:
         - funlen
         - gomnd
         - gocognit
 
-    # в клиенте командной строки всё плохо из-за кобры
     - path: "perf/app"
       linters:
         - gochecknoglobals
         - gochecknoinits
         - dupl
 
-    # в коде с большим количеством CGO wsl плохо работает
-    - path: "server/libucsdos/.*\\.go$"
-      text: "block should not end"
-      linters:
-        - wsl
-
-    - path: "server/libucsdos/.*\\.go$"
-      text: "defer statements"
-      linters:
-        - wsl
-
-    - path: "server/libucsdos/.*\\.go$"
-      text: "only cuddled"
-      linters:
-        - wsl
-
-    # заглушки не обязаны иметь полный набор комментариев
     - path: mock.go
       text: "exported type"
       linters:
@@ -343,26 +323,17 @@ issues:
         - golint
         - revive
 
-    # в заглушках можно иметь магические числа
     - path: mock.go
       linters:
         - gomnd
 
-    # в конфигурационных структурах переупорядочивание полей для удовлетворения fieldalignment приведет к тому,
-    # что примеры конфигов разойдутся с шаблонами; требуется отдельно обсудить, стоит ли это делать (технически это очень просто)
     - path: config.go
       text: "fieldalignment"
 
     - path: server/config
       text: "fieldalignment"
 
-    # в юнит-тестах fieldalignment не так критичен, а его применение может снизить читаемость кода,
-    # поскольку он обычно пишется "прагматично"
     - path: _test\.go
-      text: "fieldalignment"
-
-    # то же самое справедливо в отношении компонентных тестов - но только кода самих тестов, а не тестовой инфраструктуры
-    - path: test/component
       text: "fieldalignment"
 
   # Independently from option `exclude` we use default exclude patterns,
