@@ -129,10 +129,14 @@ func (c *controllerImpl) updateState(serviceStats *stats.ServiceStats) error {
 }
 
 func (c *controllerImpl) updateUtilization(serviceStats *stats.ServiceStats) {
-	// To figure out, how much memory can be used in Go.
-	// Чтобы понять, сколько памяти можно аллоцировать на нужды Go,
-	// требуется вычесть из общего лимита на RSS память, в явном виде потраченную в CGO.
-	// Иными словами, если аллокации в CGO будут расти, то аллокации в Go должны ужиматься.
+	// The process memory (roughly) consists of two main parts:
+	// 1. Allocations managed by Go runtime.
+	// 2. Allocations made beyond CGO border.
+	//
+	// We can only affect the Go allocation. CGO allocations are out of the scope.
+	// To compute the amount of memory available for allocations in Go,
+	// we subtract known CGO allocations from the common memory bugdet.
+	// If CGO allocations grow, Go allocation have to shrink.
 	var cgoAllocs uint64
 
 	if c.consumptionReport != nil {
@@ -143,6 +147,9 @@ func (c *controllerImpl) updateUtilization(serviceStats *stats.ServiceStats) {
 
 	c.goAllocLimit = c.cfg.RSSLimit.Value - cgoAllocs
 
+	// Memory utilization is defined as the relation of NextGC value to the Go allocation limit.
+	// If NextGC becomes higher than the allocation limit, the GC will never run, because
+	// OOM will happen first. That's why we need to push away Go process from the allocation limit.
 	c.utilization = float64(serviceStats.NextGC) / float64(c.goAllocLimit)
 }
 
@@ -151,19 +158,19 @@ func (c *controllerImpl) updateControlValues() error {
 
 	c.pValue, err = c.componentP.value(c.utilization)
 	if err != nil {
-		return errors.Wrap(err, "component p value")
+		return errors.Wrap(err, "component proportional value")
 	}
 
-	// TODO: при появлении новых компонент суммировать их значения здесь:
+	// TODO: if new components appear, summarize their outputs here:
 	c.sumValue = c.pValue
 
-	// Сатурация выхода регулятора, чтобы эффект вышел не слишком сильным
-	// Детали:
+	// Saturate controller output so that the control parameters are not too radical.
+	// Details:
 	// https://en.wikipedia.org/wiki/Saturation_arithmetic
 	// https://habr.com/ru/post/345972/
 	const (
 		lowerBound = 0
-		upperBound = 99 // иначе GOGC превратится в 0
+		upperBound = 99 // this otherwise GOGC will turn to zero
 	)
 
 	c.sumValue = memlimiter_utils.ClampFloat64(c.sumValue, lowerBound, upperBound)
@@ -180,27 +187,27 @@ func (c *controllerImpl) updateControlParameters() {
 const percents = 100
 
 func (c *controllerImpl) updateControlParameterGOGC() {
-	// 	В зелёной зоне воздействие сбрасывается до дефолтов.
+	// Control parameters are set to defaults in the "green zone".
 	if uint32(c.utilization*percents) < c.cfg.DangerZoneGOGC {
 		c.controlParameters.GOGC = backpressure.DefaultGOGC
 
 		return
 	}
 
-	// В красной зоне для GC устанавливаются более консервативные настройки
+	// Control parameters are more conservative in the "red zone".
 	roundedValue := uint32(math.Round(c.sumValue))
 	c.controlParameters.GOGC = int(backpressure.DefaultGOGC - roundedValue)
 }
 
 func (c *controllerImpl) updateControlParameterThrottling() {
-	// 	В зелёной зоне воздействие сбрасывается до дефолтов.
+	// Disable throttling in the "green zone".
 	if uint32(c.utilization*percents) < c.cfg.DangerZoneThrottling {
 		c.controlParameters.ThrottlingPercentage = backpressure.NoThrottling
 
 		return
 	}
 
-	// В красной зоне для GC устанавливаются более консервативные настройки
+	// Control parameters are more conservative in the "red zone".
 	roundedValue := uint32(math.Round(c.sumValue))
 	c.controlParameters.ThrottlingPercentage = roundedValue
 }
@@ -241,13 +248,13 @@ func (c *controllerImpl) aggregateStats() *stats.ControllerStats {
 	return res
 }
 
-// Quit корректно завершает работу.
+// Quit gracefully stops the controller.
 func (c *controllerImpl) Quit() {
 	c.breaker.Shutdown()
 	c.breaker.Wait()
 }
 
-// NewControllerFromConfig - контроллер регулятора.
+// NewControllerFromConfig builds new controller.
 func NewControllerFromConfig(
 	logger logr.Logger,
 	cfg *ControllerConfig,

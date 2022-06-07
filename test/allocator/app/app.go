@@ -10,11 +10,13 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
+// App - CLI application.
 type App struct {
 	logger  logr.Logger
 	factory Factory
 }
 
+// Run launches the application.
 func (a *App) Run() {
 	app := &cli.App{
 		Name:  "allocator",
@@ -87,6 +89,7 @@ func (a *App) runAndWaitSignal(r Runnable) error {
 	}
 }
 
+// NewApp prepares new application.
 func NewApp(logger logr.Logger, factory Factory) *App {
 	return &App{
 		logger:  logger,

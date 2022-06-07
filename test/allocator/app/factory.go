@@ -12,13 +12,19 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
+// Runnable represents some task that can be run.
 type Runnable interface {
+	// Run - a blocking call.
 	Run() error
+	// Quit terminates process.
 	Quit()
 }
 
+// Factory builds runnable tasks.
 type Factory interface {
+	// MakeServer creates a server.
 	MakeServer(c *cli.Context) (Runnable, error)
+	// MakePerfClient creates a client for performance tests.
 	MakePerfClient(c *cli.Context) (Runnable, error)
 }
 
@@ -70,6 +76,7 @@ func (f *factoryDefault) MakePerfClient(c *cli.Context) (Runnable, error) {
 	return cl, nil
 }
 
+// NewFactory makes new default factory.
 func NewFactory(logger logr.Logger) Factory {
 	return &factoryDefault{logger: logger}
 }

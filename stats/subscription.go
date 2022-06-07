@@ -7,9 +7,14 @@ import (
 	"github.com/newcloudtechnologies/memlimiter/utils/breaker"
 )
 
-// Subscription - интерфейс подписки на оперативную статистику
+// Subscription - service stats subscription interface.
+// There is a default implementation, but if you use Cgo in your application,
+// it's strongly recommended to implement this interface on your own, because
+// you need to provide custom stats containing information on Cgo memory consumption.
 type Subscription interface {
+	// Updates returns outgoing stream of service stats.
 	Updates() <-chan *ServiceStats
+	// Quit terminates program.
 	Quit()
 }
 
@@ -36,6 +41,7 @@ func (s *subscriptionDefault) makeServiceStats() *ServiceStats {
 	}
 }
 
+// NewSubscriptionDefault - default implementation of service stats subscription.
 func NewSubscriptionDefault(period time.Duration) Subscription {
 	ss := &subscriptionDefault{
 		outChan: make(chan *ServiceStats),

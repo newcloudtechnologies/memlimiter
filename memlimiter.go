@@ -26,7 +26,7 @@ type serviceImpl struct {
 	logger               logr.Logger
 }
 
-func (s *serviceImpl) GetStats() (*stats.MemlimiterStats, error) {
+func (s *serviceImpl) GetStats() (*stats.MemLimiterStats, error) {
 	controllerStats, err := s.controller.GetStats()
 	if err != nil {
 		return nil, errors.Wrap(err, "controller get stats")
@@ -34,7 +34,7 @@ func (s *serviceImpl) GetStats() (*stats.MemlimiterStats, error) {
 
 	backpressureStats := s.backpressureOperator.GetStats()
 
-	return &stats.MemlimiterStats{
+	return &stats.MemLimiterStats{
 		Controller:   controllerStats,
 		Backpressure: backpressureStats,
 	}, nil

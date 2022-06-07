@@ -16,9 +16,9 @@ type componentP struct {
 	cfg        *ComponentProportionalConfig
 }
 
-func (c *componentP) value(memoryUsage float64) (float64, error) {
+func (c *componentP) value(utilization float64) (float64, error) {
 	if c.lastValues != nil {
-		valueEMA, err := c.valueEMA(memoryUsage)
+		valueEMA, err := c.valueEMA(utilization)
 		if err != nil {
 			return math.NaN(), errors.Wrap(err, "value EMA")
 		}
@@ -26,7 +26,7 @@ func (c *componentP) value(memoryUsage float64) (float64, error) {
 		return valueEMA, nil
 	}
 
-	valueRaw, err := c.valueRaw(memoryUsage)
+	valueRaw, err := c.valueRaw(utilization)
 	if err != nil {
 		return math.NaN(), errors.Wrap(err, "value raw")
 	}
@@ -34,19 +34,19 @@ func (c *componentP) value(memoryUsage float64) (float64, error) {
 	return valueRaw, nil
 }
 
-func (c *componentP) valueRaw(memoryUsage float64) (float64, error) {
-	if memoryUsage < 0 {
-		return math.NaN(), errors.Errorf("value is undefined if memory usage = %v", memoryUsage)
+func (c *componentP) valueRaw(utilization float64) (float64, error) {
+	if utilization < 0 {
+		return math.NaN(), errors.Errorf("value is undefined if memory usage = %v", utilization)
 	}
 
-	if memoryUsage >= 1 {
+	if utilization >= 1 {
 		// In theory, values >= 1 are impossible, but in practice sometimes we face small exceeding of the upper bound (< 1.1).
 		// This needs to be investigated later.
 		const maxReasonableOutput = 100
 
 		c.logger.Info(
 			"not a good value for memory usage, cutting output value",
-			"memory_usage", memoryUsage,
+			"memory_usage", utilization,
 			"output_value", maxReasonableOutput,
 		)
 
@@ -54,11 +54,11 @@ func (c *componentP) valueRaw(memoryUsage float64) (float64, error) {
 	}
 
 	// The closer the memory usage value is to 100%, the stronger the control signal.
-	return c.cfg.Coefficient * (1 / (1 - memoryUsage)), nil
+	return c.cfg.Coefficient * (1 / (1 - utilization)), nil
 }
 
-func (c *componentP) valueEMA(memoryUsage float64) (float64, error) {
-	valueRaw, err := c.valueRaw(memoryUsage)
+func (c *componentP) valueEMA(utilization float64) (float64, error) {
+	valueRaw, err := c.valueRaw(utilization)
 	if err != nil {
 		return 0, errors.Wrap(err, "value raw")
 	}

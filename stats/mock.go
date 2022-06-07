@@ -4,15 +4,16 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
-var _ Subscription = (*ServiceSubscriptionMock)(nil)
+var _ Subscription = (*SubscriptionMock)(nil)
 
-type ServiceSubscriptionMock struct {
+// SubscriptionMock mocks Subscription
+type SubscriptionMock struct {
 	Chan chan *ServiceStats
 	mock.Mock
 }
 
-func (m *ServiceSubscriptionMock) Updates() <-chan *ServiceStats {
+func (m *SubscriptionMock) Updates() <-chan *ServiceStats {
 	return m.Chan
 }
 
-func (m *ServiceSubscriptionMock) Quit() { m.Called() }
+func (m *SubscriptionMock) Quit() { m.Called() }
