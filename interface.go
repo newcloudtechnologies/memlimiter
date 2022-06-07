@@ -7,7 +7,7 @@ import (
 
 // Service - верхнеуровневый интерфейс системы управления бюджетом оперативной памяти.
 type Service interface {
-	GetStats() (*stats.Memlimiter, error)
+	GetStats() (*stats.MemlimiterStats, error)
 	// MakeUnaryServerInterceptor возвращает интерсептор для унарных запросов
 	MakeUnaryServerInterceptor() grpc.UnaryServerInterceptor
 	// MakeStreamServerInterceptor возвращает интерсептор для стримовых запросов

@@ -50,15 +50,15 @@ type controllerImpl struct {
 }
 
 type getStatsRequest struct {
-	result chan *stats.Controller
+	result chan *stats.ControllerStats
 }
 
-func (r *getStatsRequest) respondWith(resp *stats.Controller) {
+func (r *getStatsRequest) respondWith(resp *stats.ControllerStats) {
 	r.result <- resp
 }
 
-func (c *controllerImpl) GetStats() (*stats.Controller, error) {
-	req := &getStatsRequest{result: make(chan *stats.Controller, 1)}
+func (c *controllerImpl) GetStats() (*stats.ControllerStats, error) {
+	req := &getStatsRequest{result: make(chan *stats.ControllerStats, 1)}
 
 	select {
 	case c.getStatsChan <- req:
@@ -112,7 +112,7 @@ func (c *controllerImpl) loop() {
 	}
 }
 
-func (c *controllerImpl) updateState(serviceStats *stats.Service) error {
+func (c *controllerImpl) updateState(serviceStats *stats.ServiceStats) error {
 	// извлекаем оперативную информацию о спец. потребителях памяти, если она предоставляется клиентом
 	if c.consumptionReporter != nil {
 		var err error
@@ -134,7 +134,7 @@ func (c *controllerImpl) updateState(serviceStats *stats.Service) error {
 	return nil
 }
 
-func (c *controllerImpl) updateUtilization(serviceStats *stats.Service) {
+func (c *controllerImpl) updateUtilization(serviceStats *stats.ServiceStats) {
 	// Чтобы понять, сколько памяти можно аллоцировать на нужды Go,
 	// требуется вычесть из общего лимита на RSS память, в явном виде потраченную в CGO.
 	// Иными словами, если аллокации в CGO будут расти, то аллокации в Go должны ужиматься.
@@ -224,21 +224,21 @@ func (c *controllerImpl) applyControlValue() error {
 	return nil
 }
 
-func (c *controllerImpl) aggregateStats() *stats.Controller {
-	res := &stats.Controller{
-		MemoryBudget: &stats.MemoryBudget{
+func (c *controllerImpl) aggregateStats() *stats.ControllerStats {
+	res := &stats.ControllerStats{
+		MemoryBudget: &stats.MemoryBudgetStats{
 			RSSLimit:     c.cfg.RSSLimit.Value,
 			GoAllocLimit: c.goAllocLimit,
 			Utilization:  c.utilization,
 		},
-		NextGC: &stats.ControllerNextGC{
+		NextGC: &stats.ControllerNextGCStats{
 			P:      c.pValue,
 			Output: c.sumValue,
 		},
 	}
 
 	if c.consumptionReport != nil {
-		res.MemoryBudget.SpecialConsumers = &stats.SpecialConsumers{}
+		res.MemoryBudget.SpecialConsumers = &stats.SpecialConsumersStats{}
 		res.MemoryBudget.SpecialConsumers.Go = c.consumptionReport.Go
 		res.MemoryBudget.SpecialConsumers.Cgo = c.consumptionReport.Cgo
 	}

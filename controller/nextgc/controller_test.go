@@ -38,17 +38,17 @@ func TestController(t *testing.T) {
 	}
 
 	// Первый вариант статистики описывает ситуацию, когда память близка к исчерпанию
-	memoryBudgetExhausted := &stats.Service{
+	memoryBudgetExhausted := &stats.ServiceStats{
 		NextGC: 950 * bytefmt.MEGABYTE, // память потрачена на 95%
 	}
 
 	// Во втором варианте бюджет памяти возвращается в норму
-	memoryBudgetNormal := &stats.Service{
+	memoryBudgetNormal := &stats.ServiceStats{
 		NextGC: 300 * bytefmt.MEGABYTE, // память потрачена на 50%
 	}
 
 	subscriptionMock := &stats.ServiceSubscriptionMock{
-		Chan: make(chan *stats.Service),
+		Chan: make(chan *stats.ServiceStats),
 	}
 
 	// канал закрывается, когда backpressure.Operator получит все необходимые команды
@@ -63,7 +63,7 @@ func TestController(t *testing.T) {
 		for {
 			select {
 			case <-ticker.C:
-				serviceStats, ok := serviceStatsContainer.Load().(*stats.Service)
+				serviceStats, ok := serviceStatsContainer.Load().(*stats.ServiceStats)
 				if ok {
 					subscriptionMock.Chan <- serviceStats
 				}

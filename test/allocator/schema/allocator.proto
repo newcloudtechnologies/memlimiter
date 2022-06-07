@@ -1,0 +1,26 @@
+syntax = "proto3";
+
+package schema;
+
+option go_package = "gitlab.stageoffice.ru/UCS-COMMON/memlimiter/test/allocator/schema";
+
+import "google/protobuf/duration.proto";
+
+// Allocator - тестовый сервис, который просто делает аллокации во время обработки запроса
+service Allocator {
+    rpc MakeAllocation (MakeAllocationRequest) returns (MakeAllocationResponse) {}
+}
+
+// MakeAllocationRequest - запрос на аллокацию
+message MakeAllocationRequest {
+    // size - размер аллокации
+    uint64 size = 1;
+    // duration - продолжительность времени, на которое надо заблокировать запрос после аллокации
+    google.protobuf.Duration duration = 2;
+}
+
+// MakeAllocationResponse - ответ на запрос на аллокацию
+message MakeAllocationResponse {
+    // value - просто некоторое значение
+    uint64 value = 1;
+}
