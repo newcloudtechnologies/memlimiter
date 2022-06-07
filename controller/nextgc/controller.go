@@ -58,14 +58,14 @@ func (c *controllerImpl) GetStats() (*stats.ControllerStats, error) {
 	select {
 	case c.getStatsChan <- req:
 	case <-c.breaker.Done():
-		return nil, c.breaker.Err()
+		return nil, errors.Wrap(c.breaker.Err(), "breaker err")
 	}
 
 	select {
 	case resp := <-req.result:
 		return resp, nil
 	case <-c.breaker.Done():
-		return nil, c.breaker.Err()
+		return nil, errors.Wrap(c.breaker.Err(), "breaker err")
 	}
 }
 
@@ -108,6 +108,7 @@ func (c *controllerImpl) loop() {
 func (c *controllerImpl) updateState(serviceStats stats.ServiceStats) error {
 	// Extract latest report on special memory consumers if any.
 	var err error
+
 	c.consumptionReport, err = serviceStats.PredefinedConsumers()
 	if err != nil {
 		return errors.Wrap(err, "predefined consumers")

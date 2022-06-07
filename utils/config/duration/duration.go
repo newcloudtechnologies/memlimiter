@@ -11,6 +11,7 @@ type Duration struct {
 	time.Duration
 }
 
+// UnmarshalJSON - JSON deserializer.
 func (d *Duration) UnmarshalJSON(data []byte) (err error) {
 	var s string
 
@@ -21,15 +22,19 @@ func (d *Duration) UnmarshalJSON(data []byte) (err error) {
 	if s == "0" { // для случая без указания размерности
 		return
 	}
+
 	if s == "" { // для случая использования в cli-интерфейсе и пустой строки в качестве дефолта
 		return
 	}
 
 	d.Duration, err = time.ParseDuration(s)
+
 	return
 }
 
+// MarshalJSON - JSON serializer.
 func (d Duration) MarshalJSON() ([]byte, error) {
 	s := fmt.Sprintf("\"%s\"", d.Duration.String())
+
 	return []byte(s), nil
 }

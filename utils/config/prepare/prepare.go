@@ -30,7 +30,7 @@ func Prepare(src interface{}) error {
 	if ok {
 		err := pr.Prepare()
 		if err != nil {
-			return err
+			return errors.Wrap(err, "prepare error")
 		}
 	}
 	return traverse(v, true)

@@ -11,9 +11,9 @@ import (
 
 // The proportional component of the controller.
 type componentP struct {
-	logger     logr.Logger
 	lastValues metrics.Sample
 	cfg        *ComponentProportionalConfig
+	logger     logr.Logger
 }
 
 func (c *componentP) value(utilization float64) (float64, error) {
@@ -65,7 +65,9 @@ func (c *componentP) valueEMA(utilization float64) (float64, error) {
 
 	// TODO: need to find statistical library working with floats to make this conversion unnecessary
 	const reductionFactor = 100
+
 	c.lastValues.Update(int64(valueRaw * reductionFactor))
+
 	return c.lastValues.Mean() / reductionFactor, nil
 }
 

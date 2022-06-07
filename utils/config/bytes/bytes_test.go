@@ -65,6 +65,7 @@ func TestBytesByValue(t *testing.T) {
 	}
 
 	var ms masterStructVal
+
 	data := []byte(`{"t":{"size":"20M"}}`)
 	assert.NoError(t, json.Unmarshal(data, &ms))
 	assert.Equal(t, uint64(20*bytefmt.MEGABYTE), ms.T.Size.Value)
@@ -80,6 +81,7 @@ func TestBytesByPointer(t *testing.T) {
 	}
 
 	var ms masterStructPtr
+
 	data := []byte(`{"t":{"size":"20M"}}`)
 	assert.NoError(t, json.Unmarshal(data, &ms))
 	assert.Equal(t, uint64(20*bytefmt.MEGABYTE), ms.T.Size.Value)
@@ -91,6 +93,7 @@ func TestBytesByPointer(t *testing.T) {
 
 func TestBytesZeroValue(t *testing.T) {
 	var ts testStruct
+
 	data := []byte(`{"size": "0"}`)
 	assert.NoError(t, json.Unmarshal(data, &ts))
 	assert.Equal(t, uint64(0*bytefmt.MEGABYTE), ts.Size.Value)

@@ -20,8 +20,8 @@ type ServiceStatsSubscription interface {
 
 type subscriptionDefault struct {
 	outChan chan ServiceStats
-	period  time.Duration
 	breaker *breaker.Breaker
+	period  time.Duration
 }
 
 func (s *subscriptionDefault) Updates() <-chan ServiceStats { return s.outChan }

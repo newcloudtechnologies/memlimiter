@@ -12,6 +12,7 @@ type Bytes struct {
 	Value uint64
 }
 
+// UnmarshalJSON - JSON deserializer.
 func (b *Bytes) UnmarshalJSON(data []byte) (err error) {
 	var s string
 
@@ -24,11 +25,14 @@ func (b *Bytes) UnmarshalJSON(data []byte) (err error) {
 	}
 
 	b.Value, err = bytefmt.ToBytes(s)
+
 	return
 }
 
+// MarshalJSON - JSON serializer.
 func (b Bytes) MarshalJSON() ([]byte, error) {
 	str := fmt.Sprintf("\"%s\"", bytefmt.ByteSize(b.Value))
+
 	return []byte(str), nil
 }
 

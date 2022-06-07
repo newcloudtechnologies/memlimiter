@@ -34,10 +34,10 @@ var _ Server = (*serverImpl)(nil)
 
 type serverImpl struct {
 	schema.UnimplementedAllocatorServer
-	cfg        *Config
-	logger     logr.Logger
-	grpcServer *grpc.Server
 	ml         memlimiter.Service
+	cfg        *Config
+	grpcServer *grpc.Server
+	logger     logr.Logger
 }
 
 func (srv *serverImpl) MakeAllocation(_ context.Context, request *schema.MakeAllocationRequest) (*schema.MakeAllocationResponse, error) {
@@ -70,7 +70,7 @@ func (srv *serverImpl) MakeAllocation(_ context.Context, request *schema.MakeAll
 }
 
 func (srv *serverImpl) Run() error {
-	endpoint := srv.cfg.Server.ListenEndpoint
+	endpoint := srv.cfg.ListenEndpoint
 
 	listener, err := net.Listen("tcp", endpoint)
 	if err != nil {

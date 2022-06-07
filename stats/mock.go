@@ -17,6 +17,7 @@ func (m *ServiceStatsMock) NextGC() uint64 {
 
 func (m *ServiceStatsMock) PredefinedConsumers() (*ConsumptionReport, error) {
 	args := m.Called()
+
 	return args.Get(0).(*ConsumptionReport), args.Error(1)
 }
 

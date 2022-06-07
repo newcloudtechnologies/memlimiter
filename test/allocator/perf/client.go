@@ -19,12 +19,12 @@ import (
 // Client - client for performance testing.
 type Client struct {
 	startTime        time.Time
-	logger           logr.Logger
-	grpcConn         *grpc.ClientConn
 	client           schema.AllocatorClient
-	breaker          *breaker.Breaker
 	requestsInFlight metrics.Counter
+	grpcConn         *grpc.ClientConn
+	breaker          *breaker.Breaker
 	cfg              *Config
+	logger           logr.Logger
 }
 
 // Run starts load session.

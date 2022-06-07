@@ -69,10 +69,12 @@ func (b *Breaker) ShutdownAndWait() {
 	b.Wait()
 }
 
+// Deadline implemented for the sake of compatibility with context.Context
 func (b *Breaker) Deadline() (deadline time.Time, ok bool) {
 	return time.Time{}, false
 }
 
+// Value implemented for the sake of compatibility with context.Context
 func (b *Breaker) Value(key interface{}) interface{} { return nil }
 
 // Done returns channel which can be used in a manner similar to context.Context.Done().

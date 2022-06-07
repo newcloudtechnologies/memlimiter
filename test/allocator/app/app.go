@@ -12,8 +12,8 @@ import (
 
 // App - CLI application.
 type App struct {
-	logger  logr.Logger
 	factory Factory
+	logger  logr.Logger
 }
 
 // Run launches the application.

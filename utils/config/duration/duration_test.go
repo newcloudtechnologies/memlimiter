@@ -40,7 +40,6 @@ func TestDuration_UnmarshalJSON(t *testing.T) {
 }
 
 func TestDuration_MarshalJSON(t *testing.T) {
-
 	var (
 		ts   testStruct
 		dump []byte
@@ -79,6 +78,7 @@ func TestDurationByValue(t *testing.T) {
 	}
 
 	var ms masterStructVal
+
 	data := []byte(`{"t":{"timeout":"2ns"}}`)
 	assert.NoError(t, json.Unmarshal(data, &ms))
 	assert.Equal(t, 2*time.Nanosecond, ms.T.Timeout.Duration)
@@ -94,6 +94,7 @@ func TestDurationByPointer(t *testing.T) {
 	}
 
 	var ms masterStructPtr
+
 	data := []byte(`{"t":{"timeout":"2ns"}}`)
 	assert.NoError(t, json.Unmarshal(data, &ms))
 	assert.Equal(t, 2*time.Nanosecond, ms.T.Timeout.Duration)
@@ -105,6 +106,7 @@ func TestDurationByPointer(t *testing.T) {
 
 func TestDurationZeroValue(t *testing.T) {
 	var ts testStruct
+
 	data := []byte(`{"size": "0"}`)
 	assert.NoError(t, json.Unmarshal(data, &ts))
 	assert.Equal(t, 0*time.Second, ts.Timeout.Duration)
