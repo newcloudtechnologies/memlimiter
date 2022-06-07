@@ -6,13 +6,11 @@ import (
 	"time"
 )
 
-// Duration предоставляет возможность задавать конфигурируемые
-// в json длительности в текстовом виде
+// Duration helps to represent human-readable duration values in JSON
 type Duration struct {
 	time.Duration
 }
 
-// UnmarshalJSON ...
 func (d *Duration) UnmarshalJSON(data []byte) (err error) {
 	var s string
 
@@ -31,7 +29,6 @@ func (d *Duration) UnmarshalJSON(data []byte) (err error) {
 	return
 }
 
-// MarshalJSON ...
 func (d Duration) MarshalJSON() ([]byte, error) {
 	s := fmt.Sprintf("\"%s\"", d.Duration.String())
 	return []byte(s), nil

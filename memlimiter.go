@@ -21,7 +21,7 @@ var _ Service = (*serviceImpl)(nil)
 // serviceImpl - система управления бюджетом оперативной памяти.
 type serviceImpl struct {
 	backpressureOperator backpressure.Operator
-	statsSubscription    stats.Subscription
+	statsSubscription    stats.ServiceStatsSubscription
 	controller           controller.Controller
 	logger               logr.Logger
 }
@@ -90,11 +90,10 @@ func (s *serviceImpl) Quit() {
 }
 
 func NewServiceFromConfig(
-	logger logr.Logger, // обязательный
-	cfg *Config, // обязательный
-	applicationTerminator utils.ApplicationTerminator, // обязательный
-	statsSubscription stats.Subscription, // mandatory
-	consumptionReporter utils.ConsumptionReporter, // опциональный
+	logger logr.Logger,
+	cfg *Config,
+	applicationTerminator utils.ApplicationTerminator,
+	statsSubscription stats.ServiceStatsSubscription,
 ) (Service, error) {
 	if err := prepare.Prepare(cfg); err != nil {
 		return nil, errors.Wrap(err, "prepare config")
@@ -114,7 +113,6 @@ func NewServiceFromConfig(
 		logger,
 		cfg.ControllerNextGC,
 		statsSubscription,
-		consumptionReporter,
 		backpressureOperator,
 		applicationTerminator,
 	)

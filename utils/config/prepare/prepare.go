@@ -12,14 +12,13 @@ const (
 	optValue       = "optional"
 )
 
-// Preparer имплементируется структурами, которые обычно формируют конфиги сервисов
+// Preparer is used for recursive validation of configuration structures
 type Preparer interface {
-	// Prepare валидирует структуру конфига
+	// Prepare validates something.
 	Prepare() error
 }
 
-// Prepare рекурсивно вызывает методы валидации у структуры
-// конфига и её составных частей
+// Prepare calls Prepare() method on the object and its fields recursively.
 func Prepare(src interface{}) error {
 	if src == nil {
 		return nil
@@ -66,7 +65,7 @@ func traverse(v reflect.Value, parentTraversed bool) (err error) {
 				return errors.Errorf("invalid section '%s': %v", tagValue, err)
 			}
 
-			// вызываем Prepare() у детей
+			// call Prepare() on children.
 			child := v.Field(j)
 			if child.CanAddr() {
 				if child.Addr().MethodByName("Prepare").Kind() != reflect.Invalid {

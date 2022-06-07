@@ -1,2 +1,2 @@
-// Package utils - вспомогательные типы данных
+// Package utils provides various utilities and helpers.
 package utils

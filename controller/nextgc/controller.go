@@ -21,8 +21,7 @@ import (
 //
 //nolint:govet
 type controllerImpl struct {
-	input                 stats.Subscription                     // input: service stats subscription.
-	consumptionReporter   memlimiter_utils.ConsumptionReporter   // input: information about special memory consumers.
+	input                 stats.ServiceStatsSubscription         // input: service stats subscription.
 	backpressureOperator  backpressure.Operator                  // output: write control parameters here
 	applicationTerminator memlimiter_utils.ApplicationTerminator // output: used in case of emergency stop
 
@@ -31,12 +30,12 @@ type controllerImpl struct {
 	componentP *componentP
 
 	// cached values, describing the actual state of the controller:
-	pValue            float64                             // proportional component's output
-	sumValue          float64                             // final output
-	goAllocLimit      uint64                              // memory budget [bytes]
-	utilization       float64                             // memory budget utilization [percents]
-	consumptionReport *memlimiter_utils.ConsumptionReport // latest special memory consumers report
-	controlParameters *stats.ControlParameters            // latest control parameters value
+	pValue            float64                  // proportional component's output
+	sumValue          float64                  // final output
+	goAllocLimit      uint64                   // memory budget [bytes]
+	utilization       float64                  // memory budget utilization [percents]
+	consumptionReport *stats.ConsumptionReport // latest special memory consumers report
+	controlParameters *stats.ControlParameters // latest control parameters value
 
 	getStatsChan chan *getStatsRequest
 
@@ -106,15 +105,12 @@ func (c *controllerImpl) loop() {
 	}
 }
 
-func (c *controllerImpl) updateState(serviceStats *stats.ServiceStats) error {
+func (c *controllerImpl) updateState(serviceStats stats.ServiceStats) error {
 	// Extract latest report on special memory consumers if any.
-	if c.consumptionReporter != nil {
-		var err error
-
-		c.consumptionReport, err = c.consumptionReporter.PredefinedConsumers(serviceStats.Custom)
-		if err != nil {
-			return errors.Wrap(err, "predefined consumers")
-		}
+	var err error
+	c.consumptionReport, err = serviceStats.PredefinedConsumers()
+	if err != nil {
+		return errors.Wrap(err, "predefined consumers")
 	}
 
 	c.updateUtilization(serviceStats)
@@ -128,7 +124,7 @@ func (c *controllerImpl) updateState(serviceStats *stats.ServiceStats) error {
 	return nil
 }
 
-func (c *controllerImpl) updateUtilization(serviceStats *stats.ServiceStats) {
+func (c *controllerImpl) updateUtilization(serviceStats stats.ServiceStats) {
 	// The process memory (roughly) consists of two main parts:
 	// 1. Allocations managed by Go runtime.
 	// 2. Allocations made beyond CGO border.
@@ -150,7 +146,7 @@ func (c *controllerImpl) updateUtilization(serviceStats *stats.ServiceStats) {
 	// Memory utilization is defined as the relation of NextGC value to the Go allocation limit.
 	// If NextGC becomes higher than the allocation limit, the GC will never run, because
 	// OOM will happen first. That's why we need to push away Go process from the allocation limit.
-	c.utilization = float64(serviceStats.NextGC) / float64(c.goAllocLimit)
+	c.utilization = float64(serviceStats.NextGC()) / float64(c.goAllocLimit)
 }
 
 func (c *controllerImpl) updateControlValues() error {
@@ -250,22 +246,19 @@ func (c *controllerImpl) aggregateStats() *stats.ControllerStats {
 
 // Quit gracefully stops the controller.
 func (c *controllerImpl) Quit() {
-	c.breaker.Shutdown()
-	c.breaker.Wait()
+	c.breaker.ShutdownAndWait()
 }
 
 // NewControllerFromConfig builds new controller.
 func NewControllerFromConfig(
 	logger logr.Logger,
 	cfg *ControllerConfig,
-	input stats.Subscription,
-	consumptionReporter memlimiter_utils.ConsumptionReporter,
+	input stats.ServiceStatsSubscription,
 	backpressureOperator backpressure.Operator,
 	applicationTerminator memlimiter_utils.ApplicationTerminator,
 ) controller.Controller {
 	c := &controllerImpl{
 		input:                 input,
-		consumptionReporter:   consumptionReporter,
 		backpressureOperator:  backpressureOperator,
 		componentP:            newComponentP(logger, cfg.ComponentProportional),
 		pValue:                0,

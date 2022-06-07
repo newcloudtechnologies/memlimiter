@@ -5,18 +5,18 @@ import (
 	"github.com/pkg/errors"
 )
 
-// Config - верхнеуровневая конфигурация сервиса Allocator.
+// Config - a top-level service configuration.
 type Config struct {
 	MemLimiter *memlimiter.Config `json:"memlimiter"` //nolint:tagliatelle
 	Server     *ServerConfig      `json:"server"`
 }
 
-// ServerConfig - конфигурация GRPC сервера.
+// ServerConfig - GRPC server configuration.
 type ServerConfig struct {
 	ListenEndpoint string `json:"listen_endpoint"`
 }
 
-// Prepare - валидатор конфига.
+// Prepare validates config.
 func (c *Config) Prepare() error {
 	if c.Server == nil {
 		return errors.New("server is empty")

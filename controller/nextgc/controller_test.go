@@ -39,17 +39,17 @@ func TestController(t *testing.T) {
 
 	// First ServiceStats instance describes the situation, when the memory budget utilization
 	// is very close to the limits.
-	memoryBudgetExhausted := &stats.ServiceStats{
-		NextGC: 950 * bytefmt.MEGABYTE,
-	}
+	memoryBudgetExhausted := &stats.ServiceStatsMock{}
+	memoryBudgetExhausted.On("NextGC").Return(uint64(950 * bytefmt.MEGABYTE))
+	memoryBudgetExhausted.On("PredefinedConsumers").Return((*stats.ConsumptionReport)(nil), nil)
 
 	// In the second case the memory budget utilization returns to the ordinary values.
-	memoryBudgetNormal := &stats.ServiceStats{
-		NextGC: 300 * bytefmt.MEGABYTE, // память потрачена на 50%
-	}
+	memoryBudgetNormal := &stats.ServiceStatsMock{}
+	memoryBudgetNormal.On("NextGC").Return(uint64(300 * bytefmt.MEGABYTE))
+	memoryBudgetNormal.On("PredefinedConsumers").Return((*stats.ConsumptionReport)(nil), nil)
 
 	subscriptionMock := &stats.SubscriptionMock{
-		Chan: make(chan *stats.ServiceStats),
+		Chan: make(chan stats.ServiceStats),
 	}
 
 	// this channel is closed when backpressure.Operator receives all required actions
@@ -64,7 +64,7 @@ func TestController(t *testing.T) {
 		for {
 			select {
 			case <-ticker.C:
-				serviceStats, ok := serviceStatsContainer.Load().(*stats.ServiceStats)
+				serviceStats, ok := serviceStatsContainer.Load().(stats.ServiceStats)
 				if ok {
 					subscriptionMock.Chan <- serviceStats
 				}
@@ -104,13 +104,11 @@ func TestController(t *testing.T) {
 		},
 	)
 
-	consumptionReporterMock := &utils.ConsumptionReporterMock{}
-
-	c := NewControllerFromConfig(logger, cfg, subscriptionMock, nil, backpressureOperatorMock, &utils.ApplicationTerminatorMock{})
+	c := NewControllerFromConfig(logger, cfg, subscriptionMock, backpressureOperatorMock, &utils.ApplicationTerminatorMock{})
 
 	<-terminateChan
 
 	c.Quit()
 
-	mock.AssertExpectationsForObjects(t, subscriptionMock, backpressureOperatorMock, consumptionReporterMock)
+	mock.AssertExpectationsForObjects(t, subscriptionMock, backpressureOperatorMock)
 }

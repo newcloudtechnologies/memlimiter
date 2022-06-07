@@ -6,12 +6,13 @@ import (
 	"github.com/go-logr/logr"
 )
 
-// ApplicationTerminator - интерфейс для завершения работы приложения по команде MemLimiter.
-// Применяется в тех ситуациях, когда лучше перезагрузить приложение, чем продолжать работу.
-// Должен реализовываться пользователями библиотеки, так у каждого приложения свой протокол корректного завершения работы.
+// ApplicationTerminator - interface to shut down the application by MemLimiter command.
+// It is used in such cases when it's better to restart the application rather than continue working.
+// It must be implemented by library users, because every application has its own
+// termination protocol.
 type ApplicationTerminator interface {
-	// Terminate - специальный метод, регистрирующий фатальную ошибку управления бюджетом памяти.
-	// Приложение обязано завершить работу, если этот метод был вызван хотя бы один раз.
+	// Terminate is a special method registering the fatal error of memory management.
+	// It's mandatory for the application to terminate itself within or after this call.
 	Terminate(fatalErr error)
 }
 
@@ -24,9 +25,8 @@ func (at *ungracefulApplicationTerminator) Terminate(fatalErr error) {
 	os.Exit(1)
 }
 
-// NewUngracefulApplicationTerminator создаёт тривиальную имплементацию выключателя,
-// при поступлении ошибок процесс просто гасится с os.Exit(1).
-// Использовать только для самых простых stateless сервисов.
+// NewUngracefulApplicationTerminator creates trivial implementation of the ApplicationTerminator,
+// which immediately calls os.Exit(1). Can be used only with simple and stateless services.
 func NewUngracefulApplicationTerminator(logger logr.Logger) ApplicationTerminator {
 	return &ungracefulApplicationTerminator{
 		logger: logger,
@@ -39,8 +39,8 @@ type fatalErrChanApplicationTerminator struct {
 
 func (at *fatalErrChanApplicationTerminator) Terminate(fatalErr error) { at.fatalErrChan <- fatalErr }
 
-// NewFatalErrChanApplicationTerminator создаёт имплементацию выключателя,
-// в котором ошибка записывается в специальный канал, и читатель из канала её может обработать особым образом.
+// NewFatalErrChanApplicationTerminator creates an instance of the ApplicationTerminator
+// that put fatal errors to special channels, so the channel reader can handle it in another thread.
 func NewFatalErrChanApplicationTerminator(fatalErrChan chan<- error) ApplicationTerminator {
 	return &fatalErrChanApplicationTerminator{
 		fatalErrChan: fatalErrChan,

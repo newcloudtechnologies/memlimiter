@@ -16,7 +16,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-// Client - нагрузочный клиент.
+// Client - client for performance testing
 type Client struct {
 	startTime        time.Time
 	logger           logr.Logger
@@ -27,7 +27,7 @@ type Client struct {
 	cfg              *Config
 }
 
-// Run запускает нагрузочную сессию.
+// Run starts load session.
 func (p *Client) Run() error {
 	if err := p.breaker.Inc(); err != nil {
 		return errors.Wrap(err, "breaker inc")
@@ -43,13 +43,14 @@ func (p *Client) Run() error {
 
 	limiter := rate.NewLimiter(p.cfg.RPS, 1)
 
+	// single threaded for simplicity
 	for {
-		// ожидаем, пока лимитер разрешит выполнять запрос
+		// wait till limiter allows to fire a request
 		if err := limiter.Wait(p.breaker); err != nil {
 			return errors.Wrap(err, "limiter wait")
 		}
 
-		// запрос
+		// increment request copies
 		if err := p.breaker.Inc(); err != nil {
 			return errors.Wrap(err, "breaker inc")
 		}
@@ -58,10 +59,10 @@ func (p *Client) Run() error {
 
 		select {
 		case <-monitoringTicker.C:
-			// периодическая печать прогресса
+			// print progress periodically
 			p.printProgress()
 		case <-timer.C:
-			// завершение нагрузки
+			// terminate load
 			return nil
 		default:
 		}
@@ -71,7 +72,7 @@ func (p *Client) Run() error {
 func (p *Client) makeRequest() {
 	defer p.breaker.Dec()
 
-	// обновление счётчика запросов в полете
+	// update in-flight request counter
 	p.requestsInFlight.Inc(1)
 	defer p.requestsInFlight.Dec(1)
 
@@ -100,7 +101,7 @@ func (p *Client) printProgress() {
 	)
 }
 
-// Quit корректно завершает работу нагрузчика.
+// Quit terminates perf client gracefully.
 func (p *Client) Quit() {
 	p.breaker.ShutdownAndWait()
 
@@ -109,7 +110,7 @@ func (p *Client) Quit() {
 	}
 }
 
-// NewClient создаёт нагрузочный клиент.
+// NewClient creates new client for performance tests.
 func NewClient(logger logr.Logger, cfg *Config) (*Client, error) {
 	if err := prepare.Prepare(cfg); err != nil {
 		return nil, errors.Wrap(err, "configs prepare")

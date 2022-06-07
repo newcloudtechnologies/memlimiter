@@ -1,2 +1,2 @@
-// Package perf - код клиента к тестовому сервису
+// Package perf contains performance client.
 package perf

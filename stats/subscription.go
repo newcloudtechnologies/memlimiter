@@ -7,44 +7,40 @@ import (
 	"github.com/newcloudtechnologies/memlimiter/utils/breaker"
 )
 
-// Subscription - service stats subscription interface.
+// ServiceStatsSubscription - service stats subscription interface.
 // There is a default implementation, but if you use Cgo in your application,
 // it's strongly recommended to implement this interface on your own, because
 // you need to provide custom stats containing information on Cgo memory consumption.
-type Subscription interface {
+type ServiceStatsSubscription interface {
 	// Updates returns outgoing stream of service stats.
-	Updates() <-chan *ServiceStats
+	Updates() <-chan ServiceStats
 	// Quit terminates program.
 	Quit()
 }
 
 type subscriptionDefault struct {
-	outChan chan *ServiceStats
+	outChan chan ServiceStats
 	period  time.Duration
 	breaker *breaker.Breaker
 }
 
-func (s *subscriptionDefault) Updates() <-chan *ServiceStats { return s.outChan }
+func (s *subscriptionDefault) Updates() <-chan ServiceStats { return s.outChan }
 
 func (s *subscriptionDefault) Quit() {
 	s.breaker.ShutdownAndWait()
 }
 
-func (s *subscriptionDefault) makeServiceStats() *ServiceStats {
+func (s *subscriptionDefault) makeServiceStats() ServiceStats {
 	ms := &runtime.MemStats{}
 	runtime.ReadMemStats(ms)
 
-	return &ServiceStats{
-		NextGC: ms.NextGC,
-		// don't forget to put real stats of your service in your own implementation
-		Custom: nil,
-	}
+	return serviceStatsDefault{nextGC: ms.NextGC}
 }
 
 // NewSubscriptionDefault - default implementation of service stats subscription.
-func NewSubscriptionDefault(period time.Duration) Subscription {
+func NewSubscriptionDefault(period time.Duration) ServiceStatsSubscription {
 	ss := &subscriptionDefault{
-		outChan: make(chan *ServiceStats),
+		outChan: make(chan ServiceStats),
 		period:  period,
 		breaker: breaker.NewBreakerWithInitValue(1),
 	}
