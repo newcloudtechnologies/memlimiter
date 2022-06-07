@@ -8,7 +8,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-// Config - performance client configuration
+// Config - performance client configuration.
 type Config struct {
 	// Endpoint server address
 	Endpoint string `json:"endpoint"`
@@ -25,7 +25,7 @@ type Config struct {
 	RequestTimeout duration.Duration `json:"request_timeout"`
 }
 
-// Prepare validates configuration
+// Prepare validates configuration.
 func (c *Config) Prepare() error {
 	if c.Endpoint == "" {
 		return errors.New("empty endpoint")

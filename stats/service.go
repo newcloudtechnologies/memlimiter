@@ -1,6 +1,6 @@
 package stats
 
-// ServiceStats represents the actual process statistics
+// ServiceStats represents the actual process statistics.
 type ServiceStats interface {
 	// NextGC returns current NextGC value [bytes]
 	NextGC() uint64

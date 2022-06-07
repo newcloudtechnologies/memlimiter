@@ -5,7 +5,7 @@ import (
 	"github.com/newcloudtechnologies/memlimiter/stats"
 )
 
-// Service - a high-level interface for a memory usage control subsystem
+// Service - a high-level interface for a memory usage control subsystem.
 type Service interface {
 	Middleware() middleware.Middleware
 	GetStats() (*stats.MemLimiterStats, error)

@@ -91,7 +91,7 @@ BenchmarkThrottler/throttling_level_=_0-16                 22977            5427
 BenchmarkThrottler/throttling_level_=_50-16                22722            508701 ns/op
 BenchmarkThrottler/throttling_level_=_100-16               22220            488162 ns/op
 PASS
-ok      github.com/newcloudtechnologies/memlimiter/backpressure 57.747s
+ok      github.com/newcloudtechnologies/memlimiter/backpressure 57.747s.
 */
 func BenchmarkThrottler(b *testing.B) {
 	const requests = 1000

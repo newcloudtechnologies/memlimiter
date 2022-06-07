@@ -16,7 +16,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-// Client - client for performance testing
+// Client - client for performance testing.
 type Client struct {
 	startTime        time.Time
 	logger           logr.Logger

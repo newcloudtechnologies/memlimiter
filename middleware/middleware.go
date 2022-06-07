@@ -24,7 +24,7 @@ func (m *middlewareImpl) GRPC() GRPC {
 	}
 }
 
-// NewMiddleware creates new middleware instance
+// NewMiddleware creates new middleware instance.
 func NewMiddleware(logger logr.Logger, operator backpressure.Operator) Middleware {
 	return &middlewareImpl{
 		logger:               logger,

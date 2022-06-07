@@ -62,6 +62,8 @@ func (b *Breaker) Shutdown() {
 	}
 }
 
+// ShutdownAndWait switches breakers in shutdown mode and
+// waits for all background tasks to terminate.
 func (b *Breaker) ShutdownAndWait() {
 	b.Shutdown()
 	b.Wait()

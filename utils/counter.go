@@ -6,12 +6,12 @@ import (
 
 var _ Counter = (*childCounter)(nil)
 
-// Counter - thread-safe metrics counter
+// Counter - thread-safe metrics counter.
 type Counter interface {
 	go_metrics.Counter
 }
 
-// childCounter allows to construct hierarchical counters
+// childCounter allows to construct hierarchical counters.
 type childCounter struct {
 	Counter
 	parent Counter

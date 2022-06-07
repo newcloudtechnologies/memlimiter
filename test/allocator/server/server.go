@@ -17,7 +17,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-// Server represents Allocator service interface
+// Server represents Allocator service interface.
 type Server interface {
 	schema.AllocatorServer
 	// Run starts service (a blocking call).
@@ -113,8 +113,8 @@ func NewAllocatorServer(logger logr.Logger, cfg *Config, options ...grpc.ServerO
 	}
 
 	options = append(options,
-		grpc.UnaryInterceptor(ml.MakeUnaryServerInterceptor()),
-		grpc.StreamInterceptor(ml.MakeStreamServerInterceptor()),
+		grpc.UnaryInterceptor(ml.Middleware().GRPC().MakeUnaryServerInterceptor()),
+		grpc.StreamInterceptor(ml.Middleware().GRPC().MakeStreamServerInterceptor()),
 	)
 
 	srv := &serverImpl{

@@ -4,7 +4,7 @@ import (
 	"fmt"
 )
 
-// MemLimiterStats - top-level MemLimiter statistics data type
+// MemLimiterStats - top-level MemLimiter statistics data type.
 type MemLimiterStats struct {
 	// ControllerStats - memory budget controller statistics
 	Controller *ControllerStats
@@ -12,7 +12,7 @@ type MemLimiterStats struct {
 	Backpressure *BackpressureStats
 }
 
-// ControllerStats - memory budget controller stats
+// ControllerStats - memory budget controller stats.
 type ControllerStats struct {
 	// MemoryBudget - common memory budget information
 	MemoryBudget *MemoryBudgetStats
@@ -20,7 +20,7 @@ type ControllerStats struct {
 	NextGC *ControllerNextGCStats
 }
 
-// MemoryBudgetStats - memory budget stats
+// MemoryBudgetStats - memory budget stats.
 type MemoryBudgetStats struct {
 	// RSSLimit - physical memory (RSS) consumption limit [bytes].
 	RSSLimit uint64
@@ -79,7 +79,7 @@ func (cp *ControlParameters) String() string {
 	return fmt.Sprintf("gogc = %v, throttling_percentage = %v", cp.GOGC, cp.ThrottlingPercentage)
 }
 
-// ToKeysAndValues serializes struct for use in logr.Logger
+// ToKeysAndValues serializes struct for use in logr.Logger.
 func (cp *ControlParameters) ToKeysAndValues() []interface{} {
 	return []interface{}{
 		"gogc", cp.GOGC,
@@ -87,7 +87,7 @@ func (cp *ControlParameters) ToKeysAndValues() []interface{} {
 	}
 }
 
-// EqualsTo - comparator
+// EqualsTo - comparator.
 func (cp *ControlParameters) EqualsTo(other *ControlParameters) bool {
 	return cp.GOGC == other.GOGC && cp.ThrottlingPercentage == other.ThrottlingPercentage
 }

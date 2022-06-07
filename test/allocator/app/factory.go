@@ -32,6 +32,7 @@ type factoryDefault struct {
 	logger logr.Logger
 }
 
+//nolint:dupl
 func (f *factoryDefault) MakeServer(c *cli.Context) (Runnable, error) {
 	filename := c.String("config")
 
@@ -54,6 +55,7 @@ func (f *factoryDefault) MakeServer(c *cli.Context) (Runnable, error) {
 	return srv, nil
 }
 
+//nolint:dupl
 func (f *factoryDefault) MakePerfClient(c *cli.Context) (Runnable, error) {
 	filename := c.String("config")
 

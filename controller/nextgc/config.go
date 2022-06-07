@@ -26,7 +26,7 @@ type ControllerConfig struct {
 	//   if some other components will appear in future, put their configs here.
 }
 
-// Prepare - config validator
+// Prepare - config validator.
 func (c *ControllerConfig) Prepare() error {
 	if c.RSSLimit.Value == 0 {
 		return errors.New("empty RSSLimit")
@@ -51,7 +51,7 @@ func (c *ControllerConfig) Prepare() error {
 	return nil
 }
 
-// ComponentProportionalConfig - controller's proportional component configuration
+// ComponentProportionalConfig - controller's proportional component configuration.
 type ComponentProportionalConfig struct {
 	// Coefficient - coefficient used to computed weighted sum of in the controller equation
 	Coefficient float64 `json:"coefficient"`
@@ -59,7 +59,7 @@ type ComponentProportionalConfig struct {
 	WindowSize uint `json:"window_size"`
 }
 
-// Prepare - config validator
+// Prepare - config validator.
 func (c *ComponentProportionalConfig) Prepare() error {
 	if c.Coefficient == 0 {
 		return errors.New("empty Coefficient makes no sense")

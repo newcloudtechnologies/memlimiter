@@ -12,7 +12,7 @@ const (
 	optValue       = "optional"
 )
 
-// Preparer is used for recursive validation of configuration structures
+// Preparer is used for recursive validation of configuration structures.
 type Preparer interface {
 	// Prepare validates something.
 	Prepare() error
@@ -36,6 +36,7 @@ func Prepare(src interface{}) error {
 	return traverse(v, true)
 }
 
+//nolint:gocognit,gocyclo
 func traverse(v reflect.Value, parentTraversed bool) (err error) {
 	switch v.Kind() {
 	case reflect.Interface, reflect.Ptr:

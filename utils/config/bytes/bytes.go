@@ -7,7 +7,7 @@ import (
 	"code.cloudfoundry.org/bytefmt"
 )
 
-// Bytes helps to represent human-readable size values in JSON
+// Bytes helps to represent human-readable size values in JSON.
 type Bytes struct {
 	Value uint64
 }

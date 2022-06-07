@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-// Duration helps to represent human-readable duration values in JSON
+// Duration helps to represent human-readable duration values in JSON.
 type Duration struct {
 	time.Duration
 }

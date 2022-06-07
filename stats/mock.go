@@ -6,7 +6,7 @@ import (
 
 var _ ServiceStats = (*ServiceStatsMock)(nil)
 
-// ServiceStatsMock mocks ServiceStatsSubscription
+// ServiceStatsMock mocks ServiceStatsSubscription.
 type ServiceStatsMock struct {
 	mock.Mock
 }
@@ -22,7 +22,7 @@ func (m *ServiceStatsMock) PredefinedConsumers() (*ConsumptionReport, error) {
 
 var _ ServiceStatsSubscription = (*SubscriptionMock)(nil)
 
-// SubscriptionMock mocks ServiceStatsSubscription
+// SubscriptionMock mocks ServiceStatsSubscription.
 type SubscriptionMock struct {
 	Chan chan ServiceStats
 	mock.Mock
