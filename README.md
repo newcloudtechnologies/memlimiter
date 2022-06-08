@@ -56,3 +56,16 @@ $$ Throttling = \begin{cases}
 \displaystyle Output \ \ \ Utilization \gt DangeZoneThrottling \\
 \displaystyle 0 \ \ \ \ \ \ \ \ \ \ \ \ \ \ otherwise \\
 \end{cases}$$
+
+## Architecture
+
+The MemLimiter comprises two main parts:
+
+1. **Core** implementing the memory budget controller and backpressure subsystems.
+2. **Middleware** providing request throttling feature for various web frameworks. Every time the server receives a request, it uses middleware to ask the MemLimiter’s core for permission to process this request. Currently, only `GRPC` is supported, but `middleware.Middleware` is an easily extensible interface, and PRs are welcome.
+
+## Quick start guide
+
+### Services without `Cgo`
+
+### Services with `Cgo`
