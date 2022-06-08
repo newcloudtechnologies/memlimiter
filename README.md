@@ -44,4 +44,15 @@ $$ Output = \begin{cases}
 \displaystyle K_{p} \ \ \ \ otherwise \\
 \end{cases}$$
 
-Finally we convert the dimensionless quantity $Output$ into specific $GOGC$ (for the further use in [`debug.SetGCPercent`](https://pkg.go.dev/runtime/debug#SetGCPercent)) and $Throttling$ (percentage of suppressed requests) values, however, only if the $Utilization$ exceeds the specified limits:w
+Finally we convert the dimensionless quantity $Output$ into specific $GOGC$ (for the further use in [`debug.SetGCPercent`](https://pkg.go.dev/runtime/debug#SetGCPercent)) and $Throttling$ (percentage of suppressed requests) values, however, only if the $Utilization$ exceeds the specified limits:
+
+
+$$ GC = \begin{cases}
+\displaystyle Output \ \ \ Utilization \gt DangeZoneGC \\
+\displaystyle 100 \ \ \ \ \ \ \ \ \ \ otherwise \\
+\end{cases}$$
+
+$$ Throttling = \begin{cases}
+\displaystyle Output \ \ \ Utilization \gt DangeZoneThrottling \\
+\displaystyle 0 \ \ \ \ \ \ \ \ \ \ \ \ \ \ otherwise \\
+\end{cases}$$
