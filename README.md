@@ -30,7 +30,8 @@ $$Utilization = \frac {NextGC} {RSS_{limit}}$$
 
 The controller converts the input signal into the control signal according to the following formula:
 
-$$  Output = C \cdot \frac {1} / {1 - Utilization} $$
+$$  Output = C \cdot \frac {1} {1 - Utilization} $$
 
 This is not an ordinary definition for a proportional component of the PID-controller, but still the direct proportionality is preserved: the closer the $Utilization$ is to 1 (or 100%), the higher the control signal value. The main purpose of the controller is to prevent a situation in which the next GC launch will be scheduled when the memory consumption exceeds the hard limit (and this will cause OOM).
 
+You can adjust the proportional component control signal strength using a coefficient $C$. In addition, there is optional [exponential averaging](https://en.wikipedia.org/wiki/Moving_average#Exponential_moving_average) of the control signal. This helps to smooth out high-frequency fluctuations of the control signal (but it hardly eliminates [self-oscillations](https://en.wikipedia.org/wiki/Self-oscillation)).
