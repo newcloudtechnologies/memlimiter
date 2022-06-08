@@ -13,8 +13,8 @@ type Middleware interface {
 }
 
 type middlewareImpl struct {
-	logger               logr.Logger
 	backpressureOperator backpressure.Operator
+	logger               logr.Logger
 }
 
 func (m *middlewareImpl) GRPC() GRPC {

@@ -27,10 +27,13 @@ func (s *serviceImpl) Middleware() middleware.Middleware { return s.middleware }
 func (s *serviceImpl) GetStats() (*stats.MemLimiterStats, error) {
 	controllerStats, err := s.controller.GetStats()
 	if err != nil {
-		return nil, errors.Wrap(err, "controller get stats")
+		return nil, errors.Wrap(err, "controller stats")
 	}
 
-	backpressureStats := s.backpressureOperator.GetStats()
+	backpressureStats, err := s.backpressureOperator.GetStats()
+	if err != nil {
+		return nil, errors.Wrap(err, "backpressure stats")
+	}
 
 	return &stats.MemLimiterStats{
 		Controller:   controllerStats,

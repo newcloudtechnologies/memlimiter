@@ -20,8 +20,8 @@ type GRPC interface {
 }
 
 type grpcImpl struct {
-	logger               logr.Logger
 	backpressureOperator backpressure.Operator
+	logger               logr.Logger
 }
 
 func (g *grpcImpl) MakeUnaryServerInterceptor() grpc.UnaryServerInterceptor {

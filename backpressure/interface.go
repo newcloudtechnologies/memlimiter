@@ -21,5 +21,5 @@ type Operator interface {
 	// a particular request.
 	AllowRequest() bool
 	// GetStats returns statistics of Backpressure subsystem.
-	GetStats() *stats.BackpressureStats
+	GetStats() (*stats.BackpressureStats, error)
 }

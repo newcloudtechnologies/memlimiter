@@ -11,7 +11,7 @@ type OperatorMock struct {
 	mock.Mock
 }
 
-func (m *OperatorMock) GetStats() *stats.BackpressureStats {
+func (m *OperatorMock) GetStats() (*stats.BackpressureStats, error) {
 	panic("implement me")
 }
 

@@ -33,10 +33,11 @@ func Prepare(src interface{}) error {
 			return errors.Wrap(err, "prepare error")
 		}
 	}
+
 	return traverse(v, true)
 }
 
-//nolint:gocognit,gocyclo
+//nolint:gocognit,gocyclo,exhaustive,cyclop
 func traverse(v reflect.Value, parentTraversed bool) (err error) {
 	switch v.Kind() {
 	case reflect.Interface, reflect.Ptr:
@@ -44,6 +45,7 @@ func traverse(v reflect.Value, parentTraversed bool) (err error) {
 			if err := tryPrepareInterface(v.Interface()); err != nil {
 				return err
 			}
+
 			if err := traverse(v.Elem(), true); err != nil {
 				return err
 			}
@@ -54,6 +56,7 @@ func traverse(v reflect.Value, parentTraversed bool) (err error) {
 				return err
 			}
 		}
+
 		for j := 0; j < v.NumField(); j++ {
 			optTag := v.Type().Field(j).Tag.Get(prepareTagName)
 			if optTag == optValue && v.Field(j).IsNil() {
@@ -63,6 +66,7 @@ func traverse(v reflect.Value, parentTraversed bool) (err error) {
 			err := traverse(v.Field(j), false)
 			if err != nil {
 				tagValue := v.Type().Field(j).Tag.Get(tagName)
+
 				return errors.Errorf("invalid section '%s': %v", tagValue, err)
 			}
 
@@ -79,6 +83,7 @@ func traverse(v reflect.Value, parentTraversed bool) (err error) {
 			return tryPrepareInterface(v.Interface())
 		}
 	}
+
 	return nil
 }
 
@@ -87,5 +92,6 @@ func tryPrepareInterface(v interface{}) (err error) {
 	if ok {
 		err = pr.Prepare()
 	}
+
 	return
 }

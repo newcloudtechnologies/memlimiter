@@ -17,17 +17,22 @@ type operatorImpl struct {
 	logger                logr.Logger
 }
 
-func (b *operatorImpl) GetStats() *stats.BackpressureStats {
+func (b *operatorImpl) GetStats() (*stats.BackpressureStats, error) {
 	result := &stats.BackpressureStats{
 		Throttling: b.throttler.getStats(),
 	}
 
 	lastControlParameters := b.lastControlParameters.Load()
 	if lastControlParameters != nil {
-		result.ControlParameters = lastControlParameters.(*stats.ControlParameters)
+		var ok bool
+
+		result.ControlParameters, ok = lastControlParameters.(*stats.ControlParameters)
+		if !ok {
+			return nil, errors.Errorf("ivalid type cast (%T)", lastControlParameters)
+		}
 	}
 
-	return result
+	return result, nil
 }
 
 func (b *operatorImpl) SetControlParameters(value *stats.ControlParameters) error {
