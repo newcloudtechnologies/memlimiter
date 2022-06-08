@@ -19,6 +19,18 @@ $$ Utilization = \frac {NextGC} {RSS_{limit} - CGO} $$
 where:
 * $NextGC$ ([from here](https://pkg.go.dev/runtime#MemStats)) is a target size for heap, upon reaching which the Go runtime will launch the GC next time;
 * $RSS_{limit}$ is a hard limit for service's physical memory (`RSS`) consumption (so that exceeding this limit will highly likely result in OOM);
-* $CGO$ is amount of memory allocations made beyond `Cgo` borders (within `C`/`C++`/.... libraries)
+* $CGO$ is amount of memory allocations made beyond `Cgo` borders (within `C`/`C++`/.... libraries).
 
 A few notes about $CGO$ component. Allocations made outside of the Go allocator, of course, are not controlled by the Go runtime in any way. At the same time, the memory consumption limit is common for both Go and non-Go allocators. Therefore, if non-Go allocations grow, all we can do is shrink the memory budget for Go allocations (which is why we subtract $CGO$ from the denominator of the previous expression). If your service uses `Cgo`, you need to figure out how much memory is allocated “on the other side”– otherwise MemLimiter won’t be able to save your service from OOM.
+
+If the service doesn't use `Cgo`, the $Utilization$ formula is simplified to:
+$$Utilization = \frac {NextGC} {RSS_{limit}}$$
+
+### Control function
+
+The controller converts the input signal into the control signal according to the following formula:
+
+$$  Output = C \cdot \frac {1} / {1 - Utilization} $$
+
+This is not an ordinary definition for a proportional component of the PID-controller, but still the direct proportionality is preserved: the closer the $Utilization$ is to 1 (or 100%), the higher the control signal value. The main purpose of the controller is to prevent a situation in which the next GC launch will be scheduled when the memory consumption exceeds the hard limit (and this will cause OOM).
+
