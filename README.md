@@ -7,7 +7,14 @@ As of Go 1.18, all applications written in Go are leaking memory and will be eve
 
 A universal solution for programming languages with automatic memory management comprises two parts:
 
-1. Garbage collection intensification. The more often GC starts, the more garbage will be collected, the fewer new physical memory allocations we have to make for the service’s business logic.
-2. Request throttling. By suppressing some of the incoming requests, we implement the backpressure: the middleware simply cuts off part of the load coming from the client in order to avoid too many memory allocations.
+1. **Garbage collection intensification**. The more often GC starts, the more garbage will be collected, the fewer new physical memory allocations we have to make for the service’s business logic.
+2. **Request throttling**. By suppressing some of the incoming requests, we implement the backpressure: the middleware simply cuts off part of the load coming from the client in order to avoid too many memory allocations.
 
 MemLimiter represents a memory budget [automated control system](https://en.wikipedia.org/wiki/Control_system) that helps to keep the memory consumption of a Go service within a predefined limit. 
+
+### Memory budget utilization
+
+The core of the MemLimiter is a special object quite similar to [P-controller](https://en.wikipedia.org/wiki/PID_controller), but with certain specifics (more on that below). 
+Memory budget utilization value acts as an input signal for the controller. 
+We define the utilization as follows:
+$$ Utilization = \frac {NextGC} {RSS_{limit} - CGO} $$
