@@ -61,8 +61,10 @@ $$ Throttling = \begin{cases}
 
 The MemLimiter comprises two main parts:
 
-1. **Core** implementing the memory budget controller and backpressure subsystems.
-2. **Middleware** providing request throttling feature for various web frameworks. Every time the server receives a request, it uses middleware to ask the MemLimiter’s core for permission to process this request. Currently, only `GRPC` is supported, but `middleware.Middleware` is an easily extensible interface, and PRs are welcome.
+1. **Core** implementing the memory budget controller and backpressure subsystems. Core relies on actual statics provided by `stats.ServiceStatsSubscroption`. In a critical situation, core may gracefully terminate the application with `utils.ApplicationTerminator`.
+2. **Middleware** providing request throttling feature for various web frameworks. Every time the server receives a request, it uses middleware to ask the MemLimiter’s core for permission to process this request. Currently, only `GRPC` is supported, but `Middleware` is an easily extensible interface, and PRs are welcome.
+
+![Alt text](docs/architecture.png)
 
 ## Quick start guide
 
