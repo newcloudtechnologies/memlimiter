@@ -19,7 +19,7 @@ $$ Utilization = \frac {NextGC} {RSS_{limit} - CGO} $$
 where:
 * $NextGC$ ([from here](https://pkg.go.dev/runtime#MemStats)) is a target size for heap, upon reaching which the Go runtime will launch the GC next time;
 * $RSS_{limit}$ is a hard limit for service's physical memory (`RSS`) consumption (so that exceeding this limit will highly likely result in OOM);
-* $CGO$ is amount of memory allocations made beyond `Cgo` borders (within `C`/`C++`/.... libraries).
+* $CGO$ is a total size of heap allocations made beyond `Cgo` borders (within `C`/`C++`/.... libraries).
 
 A few notes about $CGO$ component. Allocations made outside of the Go allocator, of course, are not controlled by the Go runtime in any way. At the same time, the memory consumption limit is common for both Go and non-Go allocators. Therefore, if non-Go allocations grow, all we can do is shrink the memory budget for Go allocations (which is why we subtract $CGO$ from the denominator of the previous expression). If your service uses `Cgo`, you need to figure out how much memory is allocated “on the other side”– otherwise MemLimiter won’t be able to save your service from OOM.
 
@@ -43,3 +43,5 @@ $$ Output = \begin{cases}
 \displaystyle 0 \ \ \ \ \ \ \ K_{p} \lt 100 \\
 \displaystyle K_{p} \ \ \ \ otherwise \\
 \end{cases}$$
+
+Finally we convert the dimensionless quantity $Output$ into specific $GOGC$ (for the further use in [`debug.SetGCPercent`](https://pkg.go.dev/runtime/debug#SetGCPercent)) and $Throttling$ (percentage of suppressed requests) values, however, only if the $Utilization$ exceeds the specified limits:w
