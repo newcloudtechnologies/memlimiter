@@ -1,3 +1,9 @@
+/*
+ * Copyright (c) New Cloud Technologies, Ltd. 2013-2022.
+ * Author: Vitaly Isaev <vitaly.isaev@myoffice.team>
+ * License: https://github.com/newcloudtechnologies/memlimiter/blob/master/LICENSE
+ */
+
 package stats
 
 import (
@@ -22,6 +28,8 @@ type ControllerStats struct {
 
 // MemoryBudgetStats - memory budget stats.
 type MemoryBudgetStats struct {
+	// SpecialConsumers - specialized memory consumers (like CGO) statistics.
+	SpecialConsumers *SpecialConsumersStats
 	// RSSLimit - physical memory (RSS) consumption limit [bytes].
 	RSSLimit uint64
 	// GoAllocLimit - allocation limit for Go Runtime (with the except of CGO) [bytes].
@@ -29,8 +37,6 @@ type MemoryBudgetStats struct {
 	// Utilization - memory budget utilization [percents]
 	// (definition depends on a particular controller implementation).
 	Utilization float64
-	// SpecialConsumers - specialized memory consumers (like CGO) statistics.
-	SpecialConsumers *SpecialConsumersStats
 }
 
 // SpecialConsumersStats - specialized memory consumers statistics.

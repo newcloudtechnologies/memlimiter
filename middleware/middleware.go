@@ -1,3 +1,9 @@
+/*
+ * Copyright (c) New Cloud Technologies, Ltd. 2013-2022.
+ * Author: Vitaly Isaev <vitaly.isaev@myoffice.team>
+ * License: https://github.com/newcloudtechnologies/memlimiter/blob/master/LICENSE
+ */
+
 package middleware
 
 import (
@@ -13,8 +19,8 @@ type Middleware interface {
 }
 
 type middlewareImpl struct {
-	logger               logr.Logger
 	backpressureOperator backpressure.Operator
+	logger               logr.Logger
 }
 
 func (m *middlewareImpl) GRPC() GRPC {

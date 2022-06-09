@@ -1,3 +1,9 @@
+/*
+ * Copyright (c) New Cloud Technologies, Ltd. 2013-2022.
+ * Author: Vitaly Isaev <vitaly.isaev@myoffice.team>
+ * License: https://github.com/newcloudtechnologies/memlimiter/blob/master/LICENSE
+ */
+
 package utils
 
 import (
@@ -6,10 +12,10 @@ import (
 	"github.com/go-logr/logr"
 )
 
-// ApplicationTerminator - interface to shut down the application by MemLimiter command.
-// It is used in such cases when it's better to restart the application rather than continue working.
+// ApplicationTerminator shuts down the application by MemLimiter command.
+// It is used in the cases when it's better to restart the application rather than continue working.
 // It must be implemented by library users, because every application has its own
-// termination protocol.
+// graceful termination protocol.
 type ApplicationTerminator interface {
 	// Terminate is a special method registering the fatal error of memory management.
 	// It's mandatory for the application to terminate itself within or after this call.

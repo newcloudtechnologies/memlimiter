@@ -1,3 +1,9 @@
+/*
+ * Copyright (c) New Cloud Technologies, Ltd. 2013-2022.
+ * Author: Vitaly Isaev <vitaly.isaev@myoffice.team>
+ * License: https://github.com/newcloudtechnologies/memlimiter/blob/master/LICENSE
+ */
+
 package memlimiter
 
 import (
@@ -27,10 +33,13 @@ func (s *serviceImpl) Middleware() middleware.Middleware { return s.middleware }
 func (s *serviceImpl) GetStats() (*stats.MemLimiterStats, error) {
 	controllerStats, err := s.controller.GetStats()
 	if err != nil {
-		return nil, errors.Wrap(err, "controller get stats")
+		return nil, errors.Wrap(err, "controller stats")
 	}
 
-	backpressureStats := s.backpressureOperator.GetStats()
+	backpressureStats, err := s.backpressureOperator.GetStats()
+	if err != nil {
+		return nil, errors.Wrap(err, "backpressure stats")
+	}
 
 	return &stats.MemLimiterStats{
 		Controller:   controllerStats,

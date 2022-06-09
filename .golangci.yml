@@ -264,15 +264,13 @@ linters:
   enable-all: true
   fast: false
   disable:
-    - promlinter       # to many bugs
-    - gci              # ucs-fmt противоречит gci (скорее всего)
-    - godox            # мы пока не готовы к этому
-    - goerr113         # использование errors противоречит этому правилу
-    - goimports        # ucs-fmt противоречит goimports
-    - gofumpt          # ucs-fmt противоречит gofumpt (скорее всего)
-    - exhaustivestruct # раздувает код
-    - paralleltest     # назначение функции t.Parallel() не до конца понятно
-    - testpackage      # сильно ограничивает возможности проверки в юнит-тестах
+    - promlinter       # too many bugs
+    - gci              # relation with goimports is not clear
+    - gofumpt          # conflicts with wsl
+    - godox            # useless
+    - exhaustivestruct # bloats code
+    - paralleltest     # it's not clear when and how to use t.Parallel()
+    - testpackage      # seriously limits testing capabilities
 
 issues:
   # List of regexps of issue texts to exclude, empty list by default.
@@ -299,12 +297,6 @@ issues:
         - gomnd
         - gocognit
 
-    - path: "perf/app"
-      linters:
-        - gochecknoglobals
-        - gochecknoinits
-        - dupl
-
     - path: mock.go
       text: "exported type"
       linters:
@@ -328,12 +320,6 @@ issues:
         - gomnd
 
     - path: config.go
-      text: "fieldalignment"
-
-    - path: server/config
-      text: "fieldalignment"
-
-    - path: _test\.go
       text: "fieldalignment"
 
   # Independently from option `exclude` we use default exclude patterns,

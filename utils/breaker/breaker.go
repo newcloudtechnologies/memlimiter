@@ -1,3 +1,9 @@
+/*
+ * Copyright (c) New Cloud Technologies, Ltd. 2013-2022.
+ * Author: Vitaly Isaev <vitaly.isaev@myoffice.team>
+ * License: https://github.com/newcloudtechnologies/memlimiter/blob/master/LICENSE
+ */
+
 package breaker
 
 import (
@@ -15,9 +21,9 @@ const (
 
 // Breaker can be used to stop any subsystem with background tasks gracefully.
 type Breaker struct {
+	exitChan chan struct{}
 	count    int64
 	mode     int32
-	exitChan chan struct{}
 }
 
 // Inc increments number of tasks.
@@ -69,12 +75,12 @@ func (b *Breaker) ShutdownAndWait() {
 	b.Wait()
 }
 
-// Deadline implemented for the sake of compatibility with context.Context
+// Deadline implemented for the sake of compatibility with context.Context.
 func (b *Breaker) Deadline() (deadline time.Time, ok bool) {
 	return time.Time{}, false
 }
 
-// Value implemented for the sake of compatibility with context.Context
+// Value implemented for the sake of compatibility with context.Context.
 func (b *Breaker) Value(key interface{}) interface{} { return nil }
 
 // Done returns channel which can be used in a manner similar to context.Context.Done().

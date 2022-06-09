@@ -1,3 +1,9 @@
+/*
+ * Copyright (c) New Cloud Technologies, Ltd. 2013-2022.
+ * Author: Vitaly Isaev <vitaly.isaev@myoffice.team>
+ * License: https://github.com/newcloudtechnologies/memlimiter/blob/master/LICENSE
+ */
+
 package backpressure
 
 import (
@@ -21,5 +27,5 @@ type Operator interface {
 	// a particular request.
 	AllowRequest() bool
 	// GetStats returns statistics of Backpressure subsystem.
-	GetStats() *stats.BackpressureStats
+	GetStats() (*stats.BackpressureStats, error)
 }
