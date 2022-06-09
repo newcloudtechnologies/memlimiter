@@ -1,3 +1,9 @@
+/*
+ * Copyright (c) New Cloud Technologies, Ltd. 2013-2022.
+ * Author: Vitaly Isaev <vitaly.isaev@myoffice.team>
+ * License: https://github.com/newcloudtechnologies/memlimiter/blob/master/LICENSE
+ */
+
 package backpressure
 
 import (
@@ -11,8 +17,7 @@ type OperatorMock struct {
 	mock.Mock
 }
 
-func (m *OperatorMock) GetStats() *stats.BackpressureStats {
-	// TODO implement me
+func (m *OperatorMock) GetStats() (*stats.BackpressureStats, error) {
 	panic("implement me")
 }
 
@@ -23,6 +28,5 @@ func (m *OperatorMock) SetControlParameters(value *stats.ControlParameters) erro
 }
 
 func (m *OperatorMock) AllowRequest() bool {
-	// TODO implement me
 	panic("implement me")
 }

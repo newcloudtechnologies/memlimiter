@@ -1,17 +1,20 @@
+/*
+ * Copyright (c) New Cloud Technologies, Ltd. 2013-2022.
+ * Author: Vitaly Isaev <vitaly.isaev@myoffice.team>
+ * License: https://github.com/newcloudtechnologies/memlimiter/blob/master/LICENSE
+ */
+
 package memlimiter
 
 import (
+	"github.com/newcloudtechnologies/memlimiter/middleware"
 	"github.com/newcloudtechnologies/memlimiter/stats"
-	"google.golang.org/grpc"
 )
 
-// Service - верхнеуровневый интерфейс системы управления бюджетом оперативной памяти.
+// Service - a high-level interface for a memory usage control subsystem.
 type Service interface {
-	GetStats() (*stats.MemlimiterStats, error)
-	// MakeUnaryServerInterceptor возвращает интерсептор для унарных запросов
-	MakeUnaryServerInterceptor() grpc.UnaryServerInterceptor
-	// MakeStreamServerInterceptor возвращает интерсептор для стримовых запросов
-	MakeStreamServerInterceptor() grpc.StreamServerInterceptor
-	// Quit корректно завершает работу сервиса
+	Middleware() middleware.Middleware
+	GetStats() (*stats.MemLimiterStats, error)
+	// Quit terminates service gracefully.
 	Quit()
 }

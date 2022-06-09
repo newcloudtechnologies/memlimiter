@@ -1,3 +1,9 @@
+/*
+ * Copyright (c) New Cloud Technologies, Ltd. 2013-2022.
+ * Author: Vitaly Isaev <vitaly.isaev@myoffice.team>
+ * License: https://github.com/newcloudtechnologies/memlimiter/blob/master/LICENSE
+ */
+
 package nextgc
 
 import (
@@ -24,46 +30,47 @@ func TestController(t *testing.T) {
 	controllerPeriod := 2 * servusPeriod
 
 	cfg := &ControllerConfig{
-		// нельзя потратить более 1 ГБ памяти (округлено до 1000 МБ для удобства)
+		// We cannot exceed 1000M RSS threshold
 		RSSLimit: bytes.Bytes{Value: 1000 * bytefmt.MEGABYTE},
-		// при 50% исчерпании памяти начинается активное управление процессом
+		// When memory budget utilization reaches 50%, the controller will start GOGC altering.
 		DangerZoneGOGC: 50,
-		// при 90% исчерпании памяти начинается активное управление процессом
+		// When memory budget utilization reaches 90%, the controller will start request throttling.
 		DangerZoneThrottling: 90,
 		Period:               duration.Duration{Duration: controllerPeriod},
 		ComponentProportional: &ComponentProportionalConfig{
 			Coefficient: 1,
-			WindowSize:  0, // выключаем сглаживание
+			WindowSize:  0, // just for simplicity disable the smoothing
 		},
 	}
 
-	// Первый вариант статистики описывает ситуацию, когда память близка к исчерпанию
-	memoryBudgetExhausted := &stats.ServiceStats{
-		NextGC: 950 * bytefmt.MEGABYTE, // память потрачена на 95%
+	// First ServiceStats instance describes the situation, when the memory budget utilization
+	// is very close to the limits.
+	memoryBudgetExhausted := &stats.ServiceStatsMock{}
+	memoryBudgetExhausted.On("NextGC").Return(uint64(950 * bytefmt.MEGABYTE))
+	memoryBudgetExhausted.On("PredefinedConsumers").Return((*stats.ConsumptionReport)(nil), nil)
+
+	// In the second case the memory budget utilization returns to the ordinary values.
+	memoryBudgetNormal := &stats.ServiceStatsMock{}
+	memoryBudgetNormal.On("NextGC").Return(uint64(300 * bytefmt.MEGABYTE))
+	memoryBudgetNormal.On("PredefinedConsumers").Return((*stats.ConsumptionReport)(nil), nil)
+
+	subscriptionMock := &stats.SubscriptionMock{
+		Chan: make(chan stats.ServiceStats),
 	}
 
-	// Во втором варианте бюджет памяти возвращается в норму
-	memoryBudgetNormal := &stats.ServiceStats{
-		NextGC: 300 * bytefmt.MEGABYTE, // память потрачена на 50%
-	}
-
-	subscriptionMock := &stats.ServiceSubscriptionMock{
-		Chan: make(chan *stats.ServiceStats),
-	}
-
-	// канал закрывается, когда backpressure.Operator получит все необходимые команды
+	// this channel is closed when backpressure.Operator receives all required actions
 	terminateChan := make(chan struct{})
 
 	var serviceStatsContainer atomic.Value
 
-	// имитация Servus - поставщика информации о статистике в канал
+	// The stream of stats.ServiceStats instances
 	go func() {
 		ticker := time.NewTicker(servusPeriod)
 
 		for {
 			select {
 			case <-ticker.C:
-				serviceStats, ok := serviceStatsContainer.Load().(*stats.ServiceStats)
+				serviceStats, ok := serviceStatsContainer.Load().(stats.ServiceStats)
 				if ok {
 					subscriptionMock.Chan <- serviceStats
 				}
@@ -75,7 +82,7 @@ func TestController(t *testing.T) {
 
 	backpressureOperatorMock := &backpressure.OperatorMock{}
 
-	// изначельно поставляется статистика, в которой память кажется исчерпанной
+	// Here we model the situation of memory exhaustion.
 	serviceStatsContainer.Store(memoryBudgetExhausted)
 
 	backpressureOperatorMock.On(
@@ -86,8 +93,9 @@ func TestController(t *testing.T) {
 		},
 	).Return(nil).Once().Run(
 		func(args mock.Arguments) {
-			// после того, как управляющий сигнал на троттлинг был передан в backpressure,
-			// подменяем статистику на такую, чтобы регулятор подумал, что ситуация с бюджетом памяти нормализовалась
+			// As soon as the control signal is delivered to the backpressure.Operator,
+			// replace the ServiceStats instance to make controller think that memory
+			// consumption returned to normal.
 			serviceStatsContainer.Store(memoryBudgetNormal)
 		},
 	).On(
@@ -102,13 +110,11 @@ func TestController(t *testing.T) {
 		},
 	)
 
-	consumptionReporterMock := &utils.ConsumptionReporterMock{}
-
-	c := NewControllerFromConfig(logger, cfg, subscriptionMock, nil, backpressureOperatorMock, &utils.ApplicationTerminatorMock{})
+	c := NewControllerFromConfig(logger, cfg, subscriptionMock, backpressureOperatorMock, &utils.ApplicationTerminatorMock{})
 
 	<-terminateChan
 
 	c.Quit()
 
-	mock.AssertExpectationsForObjects(t, subscriptionMock, backpressureOperatorMock, consumptionReporterMock)
+	mock.AssertExpectationsForObjects(t, subscriptionMock, backpressureOperatorMock)
 }

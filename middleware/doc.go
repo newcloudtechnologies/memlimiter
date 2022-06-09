@@ -4,6 +4,6 @@
  * License: https://github.com/newcloudtechnologies/memlimiter/blob/master/LICENSE
  */
 
-// Package backpressure contains code applying control signals issued by controller to Go runtime and
-// and to gRPC server.
-package backpressure
+// Package middleware provides code that helps to integrate MemLimiter's backpressure subsystem
+// with modern web frameworks.
+package middleware

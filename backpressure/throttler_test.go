@@ -1,3 +1,9 @@
+/*
+ * Copyright (c) New Cloud Technologies, Ltd. 2013-2022.
+ * Author: Vitaly Isaev <vitaly.isaev@myoffice.team>
+ * License: https://github.com/newcloudtechnologies/memlimiter/blob/master/LICENSE
+ */
+
 package backpressure
 
 import (
@@ -10,13 +16,12 @@ import (
 )
 
 func TestThrottler(t *testing.T) {
-	// в каждом из тестов запускаем параллельно 1000 запросов, какая-то часть из них должна быть подавлена,
-	// а какая-то - пройти
+	// Launch 1000 requests concurrently in each test. Some of them must be throttled, others should be allowed.
 	const (
 		requests = 1000
 	)
 
-	// С шагом в 10%
+	// Check different throttling levels with 10% step.
 	for i := 0; i < 10; i++ {
 		throttlingLevel := uint32(i) * 10
 
@@ -55,8 +60,10 @@ func TestThrottler(t *testing.T) {
 			succeededShareExpected := 1 - failedShareExpected
 			succeededShareActual := float64(succeeded.Count()) / float64(total)
 
-			// либо длина выборки недостаточная, либо распределение ГСЧ не совсем равномерное (см. комментарии к имплементации класса)
-			// но длину выборки увеличивать нехорошо - ведь это не нагрузочные тесты, поэтому просто вводим погрешность
+			// Either sample length is not sufficient, or RNG distribution is not exactly uniform
+			// (look through the comments in throttler.go).
+			// We cannot increase sample length, because this is unit rather than performance tests,
+			// so we introduce small inaccuracy.
 			require.InDelta(
 				t,
 				failedShareExpected,
@@ -72,7 +79,7 @@ func TestThrottler(t *testing.T) {
 				fmt.Sprintf("expected = %v, actual = %v", succeededShareExpected, succeededShareActual),
 			)
 
-			// проверка внутренних счётчиков
+			// Check internal counters.
 			require.Equal(t, total, th.requestsTotal.Count())
 			require.Equal(t, failed.Count(), th.requestsThrottled.Count())
 			require.Equal(t, succeeded.Count(), th.requestsPassed.Count())
@@ -90,7 +97,7 @@ BenchmarkThrottler/throttling_level_=_0-16                 22977            5427
 BenchmarkThrottler/throttling_level_=_50-16                22722            508701 ns/op
 BenchmarkThrottler/throttling_level_=_100-16               22220            488162 ns/op
 PASS
-ok      github.com/newcloudtechnologies/memlimiter/backpressure 57.747s
+ok      github.com/newcloudtechnologies/memlimiter/backpressure 57.747s.
 */
 func BenchmarkThrottler(b *testing.B) {
 	const requests = 1000
@@ -118,7 +125,9 @@ func BenchmarkThrottler(b *testing.B) {
 
 					go func() {
 						defer wg.Done()
-						allowed = th.AllowRequest() // присваиваем значение, чтобы компилятор не выпилил вызов
+
+						// assign result to fictive variable to disallow compiler to optimize out function call
+						allowed = th.AllowRequest()
 					}()
 				}
 				wg.Wait()

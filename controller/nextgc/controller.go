@@ -1,3 +1,9 @@
+/*
+ * Copyright (c) New Cloud Technologies, Ltd. 2013-2022.
+ * Author: Vitaly Isaev <vitaly.isaev@myoffice.team>
+ * License: https://github.com/newcloudtechnologies/memlimiter/blob/master/LICENSE
+ */
+
 package nextgc
 
 import (
@@ -14,33 +20,28 @@ import (
 	memlimiter_utils "github.com/newcloudtechnologies/memlimiter/utils"
 )
 
-// controllerImpl - ПД-регулятор
-//nolint:govet // структура создаётся в ед. экземпляре, сильно ни на что не влияет
+// controllerImpl - in some early versions this class was designed to be used as a classical PID-controller
+// described in control theory. But currently it has only proportional (P) component, and the proportionality
+// is non-linear (see component_p.go). It looks like integral (I) component will never be implemented.
+// But the differential controller (D) still may be implemented in future if we face self-oscillation.
+//
+//nolint:govet
 type controllerImpl struct {
-	input                 stats.Subscription                     // вход: поток оперативной статистики сервиса
-	consumptionReporter   memlimiter_utils.ConsumptionReporter   // вход: информация о специализированных потребителях памяти
-	backpressureOperator  backpressure.Operator                  // выход: обрабатывает управляющие команды, выдаваемые регулятором
-	applicationTerminator memlimiter_utils.ApplicationTerminator // выход: аварийная остановка приложения
+	input                 stats.ServiceStatsSubscription         // input: service stats subscription.
+	backpressureOperator  backpressure.Operator                  // output: write control parameters here
+	applicationTerminator memlimiter_utils.ApplicationTerminator // output: used in case of emergency stop
 
-	// компоненты регулятора
-	//
-	// NOTE: На определённом этапе планировалось сделать полноценный ПИД-регулятор, но в итоге вышел
-	// не совсем обычный ПД-регулятор. В пропорциональной составляющей заложена
-	// не прямая, а обратная пропорциональность, а интегральная и дифференциальная составляющие отсутствуют.
-	// Интегральной, видимо, не будет никогда, а дифференциальную нужно будет доработать,
-	// если в системе будут наблюдаться проблемы с автоколебаниями.
+	// Controller components:
+	// 1. proportional component.
 	componentP *componentP
 
-	// закешированные значения, описывающее актуальное состояние ПИД-регулятора
-	//
-	// NOTE: см. замечание выше
-	pValue   float64 // значение, выданное пропорциональным компонентом
-	sumValue float64 // итоговое значение управляющего сигнала
-
-	goAllocLimit      uint64                              // акутальный бюджет памяти для Go [байты]
-	utilization       float64                             // актуальная утилизация бюджета памяти
-	consumptionReport *memlimiter_utils.ConsumptionReport // отчёт о потреблении памяти специальными потребителями
-	controlParameters *stats.ControlParameters            // значение управляющих параметров
+	// cached values, describing the actual state of the controller:
+	pValue            float64                  // proportional component's output
+	sumValue          float64                  // final output
+	goAllocLimit      uint64                   // memory budget [bytes]
+	utilization       float64                  // memory budget utilization [percents]
+	consumptionReport *stats.ConsumptionReport // latest special memory consumers report
+	controlParameters *stats.ControlParameters // latest control parameters value
 
 	getStatsChan chan *getStatsRequest
 
@@ -63,14 +64,14 @@ func (c *controllerImpl) GetStats() (*stats.ControllerStats, error) {
 	select {
 	case c.getStatsChan <- req:
 	case <-c.breaker.Done():
-		return nil, c.breaker.Err()
+		return nil, errors.Wrap(c.breaker.Err(), "breaker err")
 	}
 
 	select {
 	case resp := <-req.result:
 		return resp, nil
 	case <-c.breaker.Done():
-		return nil, c.breaker.Err()
+		return nil, errors.Wrap(c.breaker.Err(), "breaker err")
 	}
 }
 
@@ -83,23 +84,21 @@ func (c *controllerImpl) loop() {
 	for {
 		select {
 		case serviceStats := <-c.input.Updates():
-			// обновление состояния осуществляется при каждом поступлении статистики от Сервуса
+			// Update controller state every time we receive the actual stats about the process.
 			if err := c.updateState(serviceStats); err != nil {
 				c.logger.Error(err, "update state")
-				// невозможность вычислить контрольные параметры - фатальная ошибка;
-				// завершаем приложение через побочный эффект
+				// Impossibility to compute control parameters is a fatal error,
+				// terminate app using side-effect.
 				c.applicationTerminator.Terminate(err)
 
 				return
 			}
 		case <-ticker.C:
-			// а вот отправка управляющего сигнала выполняется с периодичностью, независящей от Сервуса;
-			// клиент обязан сам убедиться, что период отправки управляющего сигнала больше либо равен периоду отправки статистики Сервусом,
-			// иначе один и тот же сигнал будет высылаться несколько раз
+			// Generate control parameters based on the most recent state and send it to the backpressure operator.
 			if err := c.applyControlValue(); err != nil {
 				c.logger.Error(err, "apply control value")
-				// невозможность применить контрольные параметры - фатальная ошибка;
-				// завершаем приложение через побочный эффект
+				// Impossibility to apply control parameters is a fatal error,
+				// terminate app using side-effect.
 				c.applicationTerminator.Terminate(err)
 
 				return
@@ -112,15 +111,13 @@ func (c *controllerImpl) loop() {
 	}
 }
 
-func (c *controllerImpl) updateState(serviceStats *stats.ServiceStats) error {
-	// извлекаем оперативную информацию о спец. потребителях памяти, если она предоставляется клиентом
-	if c.consumptionReporter != nil {
-		var err error
+func (c *controllerImpl) updateState(serviceStats stats.ServiceStats) error {
+	// Extract latest report on special memory consumers if any.
+	var err error
 
-		c.consumptionReport, err = c.consumptionReporter.PredefinedConsumers(serviceStats.Custom)
-		if err != nil {
-			return errors.Wrap(err, "predefined consumers")
-		}
+	c.consumptionReport, err = serviceStats.PredefinedConsumers()
+	if err != nil {
+		return errors.Wrap(err, "predefined consumers")
 	}
 
 	c.updateUtilization(serviceStats)
@@ -134,10 +131,15 @@ func (c *controllerImpl) updateState(serviceStats *stats.ServiceStats) error {
 	return nil
 }
 
-func (c *controllerImpl) updateUtilization(serviceStats *stats.ServiceStats) {
-	// Чтобы понять, сколько памяти можно аллоцировать на нужды Go,
-	// требуется вычесть из общего лимита на RSS память, в явном виде потраченную в CGO.
-	// Иными словами, если аллокации в CGO будут расти, то аллокации в Go должны ужиматься.
+func (c *controllerImpl) updateUtilization(serviceStats stats.ServiceStats) {
+	// The process memory (roughly) consists of two main parts:
+	// 1. Allocations managed by Go runtime.
+	// 2. Allocations made beyond CGO border.
+	//
+	// We can only affect the Go allocation. CGO allocations are out of the scope.
+	// To compute the amount of memory available for allocations in Go,
+	// we subtract known CGO allocations from the common memory bugdet.
+	// If CGO allocations grow, Go allocation have to shrink.
 	var cgoAllocs uint64
 
 	if c.consumptionReport != nil {
@@ -148,7 +150,10 @@ func (c *controllerImpl) updateUtilization(serviceStats *stats.ServiceStats) {
 
 	c.goAllocLimit = c.cfg.RSSLimit.Value - cgoAllocs
 
-	c.utilization = float64(serviceStats.NextGC) / float64(c.goAllocLimit)
+	// Memory utilization is defined as the relation of NextGC value to the Go allocation limit.
+	// If NextGC becomes higher than the allocation limit, the GC will never run, because
+	// OOM will happen first. That's why we need to push away Go process from the allocation limit.
+	c.utilization = float64(serviceStats.NextGC()) / float64(c.goAllocLimit)
 }
 
 func (c *controllerImpl) updateControlValues() error {
@@ -156,19 +161,19 @@ func (c *controllerImpl) updateControlValues() error {
 
 	c.pValue, err = c.componentP.value(c.utilization)
 	if err != nil {
-		return errors.Wrap(err, "component p value")
+		return errors.Wrap(err, "component proportional value")
 	}
 
-	// TODO: при появлении новых компонент суммировать их значения здесь:
+	// TODO: if new components appear, summarize their outputs here:
 	c.sumValue = c.pValue
 
-	// Сатурация выхода регулятора, чтобы эффект вышел не слишком сильным
-	// Детали:
+	// Saturate controller output so that the control parameters are not too radical.
+	// Details:
 	// https://en.wikipedia.org/wiki/Saturation_arithmetic
 	// https://habr.com/ru/post/345972/
 	const (
 		lowerBound = 0
-		upperBound = 99 // иначе GOGC превратится в 0
+		upperBound = 99 // this otherwise GOGC will turn to zero
 	)
 
 	c.sumValue = memlimiter_utils.ClampFloat64(c.sumValue, lowerBound, upperBound)
@@ -185,27 +190,27 @@ func (c *controllerImpl) updateControlParameters() {
 const percents = 100
 
 func (c *controllerImpl) updateControlParameterGOGC() {
-	// 	В зелёной зоне воздействие сбрасывается до дефолтов.
+	// Control parameters are set to defaults in the "green zone".
 	if uint32(c.utilization*percents) < c.cfg.DangerZoneGOGC {
 		c.controlParameters.GOGC = backpressure.DefaultGOGC
 
 		return
 	}
 
-	// В красной зоне для GC устанавливаются более консервативные настройки
+	// Control parameters are more conservative in the "red zone".
 	roundedValue := uint32(math.Round(c.sumValue))
 	c.controlParameters.GOGC = int(backpressure.DefaultGOGC - roundedValue)
 }
 
 func (c *controllerImpl) updateControlParameterThrottling() {
-	// 	В зелёной зоне воздействие сбрасывается до дефолтов.
+	// Disable throttling in the "green zone".
 	if uint32(c.utilization*percents) < c.cfg.DangerZoneThrottling {
 		c.controlParameters.ThrottlingPercentage = backpressure.NoThrottling
 
 		return
 	}
 
-	// В красной зоне для GC устанавливаются более консервативные настройки
+	// Control parameters are more conservative in the "red zone".
 	roundedValue := uint32(math.Round(c.sumValue))
 	c.controlParameters.ThrottlingPercentage = roundedValue
 }
@@ -246,24 +251,21 @@ func (c *controllerImpl) aggregateStats() *stats.ControllerStats {
 	return res
 }
 
-// Quit корректно завершает работу.
+// Quit gracefully stops the controller.
 func (c *controllerImpl) Quit() {
-	c.breaker.Shutdown()
-	c.breaker.Wait()
+	c.breaker.ShutdownAndWait()
 }
 
-// NewControllerFromConfig - контроллер регулятора.
+// NewControllerFromConfig builds new controller.
 func NewControllerFromConfig(
 	logger logr.Logger,
 	cfg *ControllerConfig,
-	input stats.Subscription,
-	consumptionReporter memlimiter_utils.ConsumptionReporter,
+	input stats.ServiceStatsSubscription,
 	backpressureOperator backpressure.Operator,
 	applicationTerminator memlimiter_utils.ApplicationTerminator,
 ) controller.Controller {
 	c := &controllerImpl{
 		input:                 input,
-		consumptionReporter:   consumptionReporter,
 		backpressureOperator:  backpressureOperator,
 		componentP:            newComponentP(logger, cfg.ComponentProportional),
 		pValue:                0,

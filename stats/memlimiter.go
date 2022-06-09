@@ -1,58 +1,91 @@
+/*
+ * Copyright (c) New Cloud Technologies, Ltd. 2013-2022.
+ * Author: Vitaly Isaev <vitaly.isaev@myoffice.team>
+ * License: https://github.com/newcloudtechnologies/memlimiter/blob/master/LICENSE
+ */
+
 package stats
 
 import (
 	"fmt"
 )
 
-type MemlimiterStats struct {
-	Controller   *ControllerStats
+// MemLimiterStats - top-level MemLimiter statistics data type.
+type MemLimiterStats struct {
+	// ControllerStats - memory budget controller statistics
+	Controller *ControllerStats
+	// Backpressure - backpressure subsystem statistics
 	Backpressure *BackpressureStats
 }
 
+// ControllerStats - memory budget controller stats.
 type ControllerStats struct {
+	// MemoryBudget - common memory budget information
 	MemoryBudget *MemoryBudgetStats
-	NextGC       *ControllerNextGCStats
+	// NextGC - NextGC-aware controller statistics
+	NextGC *ControllerNextGCStats
 }
 
+// MemoryBudgetStats - memory budget stats.
 type MemoryBudgetStats struct {
-	RSSLimit         uint64
-	GoAllocLimit     uint64
-	Utilization      float64
+	// SpecialConsumers - specialized memory consumers (like CGO) statistics.
 	SpecialConsumers *SpecialConsumersStats
+	// RSSLimit - physical memory (RSS) consumption limit [bytes].
+	RSSLimit uint64
+	// GoAllocLimit - allocation limit for Go Runtime (with the except of CGO) [bytes].
+	GoAllocLimit uint64
+	// Utilization - memory budget utilization [percents]
+	// (definition depends on a particular controller implementation).
+	Utilization float64
 }
 
+// SpecialConsumersStats - specialized memory consumers statistics.
 type SpecialConsumersStats struct {
-	Go  map[string]uint64
+	// Go - Go runtime managed consumers.
+	Go map[string]uint64
+	// Cgo - consumers residing beyond the Cgo border.
 	Cgo map[string]uint64
 }
 
+// ControllerNextGCStats - NextGC-aware controller statistics.
 type ControllerNextGCStats struct {
-	P      float64
+	// P - proportional component's output
+	P float64
+	// Output - final output
 	Output float64
 }
 
+// BackpressureStats - backpressure subsystem statistics.
 type BackpressureStats struct {
-	Throttling        *ThrottlingStats
+	// Throttling - throttling subsystem statistics.
+	Throttling *ThrottlingStats
+	// ControlParameters - control signal received from controller.
 	ControlParameters *ControlParameters
 }
 
+// ThrottlingStats - throttling subsystem statistics.
 type ThrottlingStats struct {
-	Total     uint64
-	Passed    uint64
+	// Passed - number of allowed requests.
+	Passed uint64
+	// Throttled - number of throttled requests.
 	Throttled uint64
+	// Total - total number of received requests (Passed + Throttled)
+	Total uint64
 }
 
 // ControlParameters - вектор управляющих сигналов для системы.
 type ControlParameters struct {
-	GOGC                 int    // значение GOGC (принимаются значения в формате debug.SetGCPercent)
-	ThrottlingPercentage uint32 // процент запросов, которые должны быть отсечены на входе в сервис (в диапазоне [0; 100])
+	// GOGC - value that will be used as a parameter for debug.SetGCPercent
+	GOGC int
+	// ThrottlingPercentage - percentage of requests that must be throttled on the middleware level (in range [0; 100])
+	ThrottlingPercentage uint32
 }
 
 func (cp *ControlParameters) String() string {
 	return fmt.Sprintf("gogc = %v, throttling_percentage = %v", cp.GOGC, cp.ThrottlingPercentage)
 }
 
-// ToKeysAndValues serializes struct for use in logr.Logger
+// ToKeysAndValues serializes struct for use in logr.Logger.
 func (cp *ControlParameters) ToKeysAndValues() []interface{} {
 	return []interface{}{
 		"gogc", cp.GOGC,
@@ -60,6 +93,7 @@ func (cp *ControlParameters) ToKeysAndValues() []interface{} {
 	}
 }
 
+// EqualsTo - comparator.
 func (cp *ControlParameters) EqualsTo(other *ControlParameters) bool {
 	return cp.GOGC == other.GOGC && cp.ThrottlingPercentage == other.ThrottlingPercentage
 }

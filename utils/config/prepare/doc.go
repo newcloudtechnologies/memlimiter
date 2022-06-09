@@ -4,6 +4,5 @@
  * License: https://github.com/newcloudtechnologies/memlimiter/blob/master/LICENSE
  */
 
-// Package backpressure contains code applying control signals issued by controller to Go runtime and
-// and to gRPC server.
-package backpressure
+// Package prepare provides a function to validate configuration recursively.
+package prepare

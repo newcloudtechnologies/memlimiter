@@ -4,6 +4,6 @@
  * License: https://github.com/newcloudtechnologies/memlimiter/blob/master/LICENSE
  */
 
-// Package backpressure contains code applying control signals issued by controller to Go runtime and
-// and to gRPC server.
-package backpressure
+// Package breaker contains useful thread-safe abstraction the helps to control lifetime
+// of actors, background tasks, pools etc.
+package breaker

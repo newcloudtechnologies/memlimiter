@@ -1,30 +1,38 @@
+/*
+ * Copyright (c) New Cloud Technologies, Ltd. 2013-2022.
+ * Author: Vitaly Isaev <vitaly.isaev@myoffice.team>
+ * License: https://github.com/newcloudtechnologies/memlimiter/blob/master/LICENSE
+ */
+
 package nextgc
 
 import (
-	"github.com/pkg/errors"
 	"github.com/newcloudtechnologies/memlimiter/utils/config/bytes"
 	"github.com/newcloudtechnologies/memlimiter/utils/config/duration"
+	"github.com/pkg/errors"
 )
 
-// ControllerConfig - конфигурация PD-регулятора.
+// ControllerConfig - controller configuration.
 type ControllerConfig struct {
-	// RSSLimit - верхний предел потребления RSS процессом
+	// RSSLimit - physical memory (RSS) consumption hard limit for a process.
 	RSSLimit bytes.Bytes `json:"rss_limit"`
-	// DangerZoneGOGC - пороговое значение утилизации памяти, при котором регулятор начинает
-	// устанавливать более консервативные настройки для GC
-	// допустимые значения - (0; 100)
+	// DangerZoneGOGC - RSS utilization threshold that triggers controller to
+	// set more conservative parameters for GC.
+	// Possible values are in range (0; 100).
 	DangerZoneGOGC uint32 `json:"danger_zone_gogc"`
-	// DangerZoneThrottling - пороговое значение утилизации памяти, при котором регулятор начинает
-	// подавлять пользовательские запросы
-	// допустимые значения - (0; 100)
+	// DangerZoneGOGC - RSS utilization threshold that triggers controller to
+	// throttle incoming requests.
+	// Possible values are in range (0; 100).
 	DangerZoneThrottling uint32 `json:"danger_zone_throttling"`
-	// Period - периодичность генерации управляющих сигналов
+	// Period - the periodicity of control parameters computation.
 	Period duration.Duration `json:"period"`
-	// ComponentProportional - конфигурация пропорциональной составляющей регулятора
+	// ComponentProportional - controller's proportional component configuration
 	ComponentProportional *ComponentProportionalConfig `json:"component_proportional"`
+	// TODO:
+	//   if some other components will appear in future, put their configs here.
 }
 
-// Prepare - валидатор конфига.
+// Prepare - config validator.
 func (c *ControllerConfig) Prepare() error {
 	if c.RSSLimit.Value == 0 {
 		return errors.New("empty RSSLimit")
@@ -49,16 +57,15 @@ func (c *ControllerConfig) Prepare() error {
 	return nil
 }
 
-// ComponentProportionalConfig - конфигурация пропорциональной составляющей регулятора.
+// ComponentProportionalConfig - controller's proportional component configuration.
 type ComponentProportionalConfig struct {
-	// Coefficient - коэффициент для вычисления взвешенной суммы в уравнении PID-регулятора
+	// Coefficient - coefficient used to computed weighted sum of in the controller equation
 	Coefficient float64 `json:"coefficient"`
-	// WindowSize - окно осреднения для экспоненциального скользящего среднего;
-	// если равно нулю, то осреднение не выполняется.
+	// WindowSize - averaging window size for the EMA. Averaging is disabled if WindowSize is zero.
 	WindowSize uint `json:"window_size"`
 }
 
-// Prepare - валидатор конфига.
+// Prepare - config validator.
 func (c *ComponentProportionalConfig) Prepare() error {
 	if c.Coefficient == 0 {
 		return errors.New("empty Coefficient makes no sense")

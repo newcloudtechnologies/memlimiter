@@ -4,6 +4,6 @@
  * License: https://github.com/newcloudtechnologies/memlimiter/blob/master/LICENSE
  */
 
-// Package backpressure contains code applying control signals issued by controller to Go runtime and
-// and to gRPC server.
-package backpressure
+// Package stats contains various data types describing service statistics
+// MemLimiter relies on, as well as its own statistics.
+package stats

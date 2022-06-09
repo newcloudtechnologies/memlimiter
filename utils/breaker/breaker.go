@@ -1,9 +1,17 @@
+/*
+ * Copyright (c) New Cloud Technologies, Ltd. 2013-2022.
+ * Author: Vitaly Isaev <vitaly.isaev@myoffice.team>
+ * License: https://github.com/newcloudtechnologies/memlimiter/blob/master/LICENSE
+ */
+
 package breaker
 
 import (
-	"sync"
+	"runtime"
 	"sync/atomic"
 	"time"
+
+	"github.com/pkg/errors"
 )
 
 const (
@@ -11,56 +19,96 @@ const (
 	shutdown
 )
 
-// Breaker предоставляет интерфейс для корректной остановки какой-либо подсистемы
+// Breaker can be used to stop any subsystem with background tasks gracefully.
 type Breaker struct {
-	*breakerCore
 	exitChan chan struct{}
+	count    int64
+	mode     int32
 }
 
-// Shutdown переводит выключатель в состояние завершения работы,
-// в котором все вызовы метода Inc завершаются с ошибкой
+// Inc increments number of tasks.
+func (b *Breaker) Inc() error {
+	if !b.isOperational() {
+		return errors.New("shutdown in progress")
+	}
+
+	atomic.AddInt64(&b.count, 1)
+
+	return nil
+}
+
+// Dec decrements number of tasks.
+func (b *Breaker) Dec() {
+	atomic.AddInt64(&b.count, -1)
+}
+
+// isOperational checks whether breaker is in operational mode.
+func (b *Breaker) isOperational() bool { return atomic.LoadInt32(&b.mode) == operational }
+
+// Wait blocks until the number of tasks becomes equal to zero.
+func (b *Breaker) Wait() {
+	if atomic.LoadInt32(&b.mode) != shutdown {
+		panic("cannot wait on operational Breaker, turn it off first")
+	}
+
+	for {
+		if atomic.LoadInt64(&b.count) == 0 {
+			break
+		}
+
+		runtime.Gosched()
+	}
+}
+
+// Shutdown switches breaker in shutdown mode.
 func (b *Breaker) Shutdown() {
 	if atomic.CompareAndSwapInt32(&b.mode, operational, shutdown) {
+		// notify channel subscribers about termination
 		close(b.exitChan)
 	}
 }
 
+// ShutdownAndWait switches breakers in shutdown mode and
+// waits for all background tasks to terminate.
 func (b *Breaker) ShutdownAndWait() {
 	b.Shutdown()
 	b.Wait()
 }
 
+// Deadline implemented for the sake of compatibility with context.Context.
 func (b *Breaker) Deadline() (deadline time.Time, ok bool) {
 	return time.Time{}, false
 }
 
+// Value implemented for the sake of compatibility with context.Context.
 func (b *Breaker) Value(key interface{}) interface{} { return nil }
 
-// Done возвращает канал, который можно опрашивать на предмет завершённости работы
+// Done returns channel which can be used in a manner similar to context.Context.Done().
 func (b *Breaker) Done() <-chan struct{} { return b.exitChan }
 
-// NewBreaker создаёт новый "выключатель", который помогает подсчитывать
-// активные действия в какой-то подсистеме и корректно завершать её работу
+// Err returns error which can be used in a manner similar to context.Context.Done().
+func (b *Breaker) Err() error {
+	if b.isOperational() {
+		return nil
+	}
+
+	return errors.New("breaker is not operational")
+}
+
+// NewBreaker - default breaker constructor.
 func NewBreaker() *Breaker {
 	return &Breaker{
-		breakerCore: newBreakerCore(),
-		exitChan:    make(chan struct{}),
+		count:    0,
+		mode:     operational,
+		exitChan: make(chan struct{}),
 	}
 }
 
-// NewBreakerWithInitValue - альтернативный конструктор выключателя, который удобно применять при
-// создании акторов, когда уже точно известно, сколько горутин запускается при старте
+// NewBreakerWithInitValue - alternative breaker constructor convenient for usage
+// in pools and actors, when you know how many goroutines will work from the very beginning.
 func NewBreakerWithInitValue(value int64) *Breaker {
 	b := NewBreaker()
 	b.count = value
-
-	return b
-}
-
-// NewBreakerWithMutex добавляет в выключатель мьютекс, чтобы можно было пользоваться методами IncWithLock / DecWithUnlock
-func NewBreakerWithMutex() *Breaker {
-	b := NewBreaker()
-	b.mutex = &sync.RWMutex{}
 
 	return b
 }

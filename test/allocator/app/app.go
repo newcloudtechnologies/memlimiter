@@ -1,3 +1,9 @@
+/*
+ * Copyright (c) New Cloud Technologies, Ltd. 2013-2022.
+ * Author: Vitaly Isaev <vitaly.isaev@myoffice.team>
+ * License: https://github.com/newcloudtechnologies/memlimiter/blob/master/LICENSE
+ */
+
 package app
 
 import (
@@ -10,11 +16,13 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
+// App - CLI application.
 type App struct {
-	logger  logr.Logger
 	factory Factory
+	logger  logr.Logger
 }
 
+// Run launches the application.
 func (a *App) Run() {
 	app := &cli.App{
 		Name:  "allocator",
@@ -87,6 +95,7 @@ func (a *App) runAndWaitSignal(r Runnable) error {
 	}
 }
 
+// NewApp prepares new application.
 func NewApp(logger logr.Logger, factory Factory) *App {
 	return &App{
 		logger:  logger,

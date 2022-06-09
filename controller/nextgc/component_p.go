@@ -1,3 +1,9 @@
+/*
+ * Copyright (c) New Cloud Technologies, Ltd. 2013-2022.
+ * Author: Vitaly Isaev <vitaly.isaev@myoffice.team>
+ * License: https://github.com/newcloudtechnologies/memlimiter/blob/master/LICENSE
+ */
+
 package nextgc
 
 import (
@@ -9,16 +15,16 @@ import (
 	"github.com/pkg/errors"
 )
 
-// пропорциональный компонент PD-контроллера.
+// The proportional component of the controller.
 type componentP struct {
-	logger     logr.Logger
 	lastValues metrics.Sample
 	cfg        *ComponentProportionalConfig
+	logger     logr.Logger
 }
 
-func (c *componentP) value(memoryUsage float64) (float64, error) {
+func (c *componentP) value(utilization float64) (float64, error) {
 	if c.lastValues != nil {
-		valueEMA, err := c.valueEMA(memoryUsage)
+		valueEMA, err := c.valueEMA(utilization)
 		if err != nil {
 			return math.NaN(), errors.Wrap(err, "value EMA")
 		}
@@ -26,7 +32,7 @@ func (c *componentP) value(memoryUsage float64) (float64, error) {
 		return valueEMA, nil
 	}
 
-	valueRaw, err := c.valueRaw(memoryUsage)
+	valueRaw, err := c.valueRaw(utilization)
 	if err != nil {
 		return math.NaN(), errors.Wrap(err, "value raw")
 	}
@@ -34,36 +40,36 @@ func (c *componentP) value(memoryUsage float64) (float64, error) {
 	return valueRaw, nil
 }
 
-func (c *componentP) valueRaw(memoryUsage float64) (float64, error) {
-	if memoryUsage < 0 {
-		return math.NaN(), errors.Errorf("value is undefined if memory usage = %v", memoryUsage)
+func (c *componentP) valueRaw(utilization float64) (float64, error) {
+	if utilization < 0 {
+		return math.NaN(), errors.Errorf("value is undefined if memory usage = %v", utilization)
 	}
 
-	if memoryUsage >= 1 {
-		// NOTE:
-		// Теоретически значения >= 1 недостижимы, но на практике встречаются ситуации с небольшим преувеличением лимита (< 1.1),
-		// во всяком случае, встречались раньше, когда MemLimiter таргетировал не RSS utilization, a Memory Budget utilization.
+	if utilization >= 1 {
+		// In theory, values >= 1 are impossible, but in practice sometimes we face small exceeding of the upper bound (< 1.1).
+		// This needs to be investigated later.
 		const maxReasonableOutput = 100
 
 		c.logger.Info(
 			"not a good value for memory usage, cutting output value",
-			"memory_usage", memoryUsage,
+			"memory_usage", utilization,
 			"output_value", maxReasonableOutput,
 		)
 
 		return maxReasonableOutput, nil
 	}
 
-	return c.cfg.Coefficient * (1 / (1 - memoryUsage)), nil
+	// The closer the memory usage value is to 100%, the stronger the control signal.
+	return c.cfg.Coefficient * (1 / (1 - utilization)), nil
 }
 
-func (c *componentP) valueEMA(memoryUsage float64) (float64, error) {
-	valueRaw, err := c.valueRaw(memoryUsage)
+func (c *componentP) valueEMA(utilization float64) (float64, error) {
+	valueRaw, err := c.valueRaw(utilization)
 	if err != nil {
 		return 0, errors.Wrap(err, "value raw")
 	}
 
-	// Эта либа работает только с интами, искать лучшую пока нет времени
+	// TODO: need to find statistical library working with floats to make this conversion unnecessary
 	const reductionFactor = 100
 
 	c.lastValues.Update(int64(valueRaw * reductionFactor))
@@ -78,10 +84,10 @@ func newComponentP(logger logr.Logger, cfg *ComponentProportionalConfig) *compon
 	}
 
 	if cfg.WindowSize != 0 {
-		// alpha - сглаживающая константа, чем она меньше, тем больше влияние исторических величин
-		// на итоговое значение. Выбирается эмпирически, но можно связать с окном осреднения,
-		// я взял формулу отсюда:
-		// https://ru.wikipedia.org/wiki/%D0%A1%D0%BA%D0%BE%D0%BB%D1%8C%D0%B7%D1%8F%D1%89%D0%B0%D1%8F_%D1%81%D1%80%D0%B5%D0%B4%D0%BD%D1%8F%D1%8F
+		// alpha is a smoothing coefficient describing the degree of weighting decrease;
+		// the lesser the alpha is, the higher the impact of the elder historical values on the resulting value.
+		// alpha is choosed empirically, but can depend on a window size, like here:
+		// https://en.wikipedia.org/wiki/Moving_average#Relationship_between_SMA_and_EMA
 		//nolint:gomnd
 		alpha := 2 / (float64(cfg.WindowSize + 1))
 

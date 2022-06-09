@@ -1,19 +1,14 @@
+/*
+ * Copyright (c) New Cloud Technologies, Ltd. 2013-2022.
+ * Author: Vitaly Isaev <vitaly.isaev@myoffice.team>
+ * License: https://github.com/newcloudtechnologies/memlimiter/blob/master/LICENSE
+ */
+
 package utils
 
 import (
 	"github.com/stretchr/testify/mock"
 )
-
-var _ ConsumptionReporter = (*ConsumptionReporterMock)(nil)
-
-type ConsumptionReporterMock struct {
-	mock.Mock
-}
-
-func (m *ConsumptionReporterMock) PredefinedConsumers(serviceStats interface{}) (*ConsumptionReport, error) {
-	// TODO implement me
-	panic("implement me")
-}
 
 type ApplicationTerminatorMock struct {
 	mock.Mock

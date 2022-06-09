@@ -1,3 +1,9 @@
+/*
+ * Copyright (c) New Cloud Technologies, Ltd. 2013-2022.
+ * Author: Vitaly Isaev <vitaly.isaev@myoffice.team>
+ * License: https://github.com/newcloudtechnologies/memlimiter/blob/master/LICENSE
+ */
+
 package backpressure
 
 import (
@@ -11,22 +17,22 @@ import (
 )
 
 type throttler struct {
-	// группа счётчиков запросов
+	// group of request counters
 	requestsTotal     utils.Counter
 	requestsPassed    utils.Counter
 	requestsThrottled utils.Counter
 
-	// для нас важно, чтобы ГСЧ:
-	// 1. выдавал равномерное распределение
-	// 2. был потокобезопасным
-	//
-	// Чтобы не писать своё, была выбрана библиотека, в которой потокобезопасность есть из коробки,
-	// но при этом есть небольшие сомнения в равномерности распределения.
-	// По некоторым признакам, оно действительно равномерное, так как с помощью этого ГСЧ, выдающего только int'ы,
-	// можно создать ГСЧ равномерного распределенных float'ов: https://prng.di.unimi.it/
-	//
-	// Здесь появились ответы, в которых говорится, что эмпирически равномерность распределения
-	// наблюдается у всех ГСЧ семейства, кроме одного:
+	// The following features of RNG are crucial for the backpressure subsystem:
+	// 1. uniform distribution of the output;
+	// 2. thread-safety;
+
+	// In order to save time, we use a third party RNG library which is thread-safe,
+	// however, there are some concerns on the distribution uniformity.
+	// There are indicators that it's truly uniform because this RNG (providing only integer numbers)
+	// was used in the uniformly distributed float RNG implementation: https://prng.di.unimi.it/
+
+	// Here are the posts stating that (at least empirically) the distribution uniformity is
+	// observed for all RNGs belonging to this family but one:
 	// https://stackoverflow.com/questions/71050149/does-xoshiro-xoroshiro-prngs-provide-uniform-distribution
 	// https://crypto.stackexchange.com/questions/98597
 	rng *fastrand64.ThreadsafePoolRNG
@@ -56,15 +62,15 @@ func (t *throttler) getStats() *stats.ThrottlingStats {
 func (t *throttler) AllowRequest() bool {
 	threshold := atomic.LoadUint32(&t.threshold)
 
-	// если подавление отключено, разрешаем любые запросы
+	// if throttling is disabled, allow any request
 	if threshold == 0 {
 		t.requestsPassed.Inc(1)
 
 		return true
 	}
 
-	// подбрасываем монетку в диапазоне [0; 100], если выпавшее значение окажется меньше порогового значения,
-	// запрос подавляется, если нет - разрешается
+	// flip a coin in the range [0; 100]; if the actual value is less than the threshold value,
+	// throttle the request, otherwise allow it.
 	value := t.rng.Uint32n(FullThrottling)
 
 	allowed := value >= threshold
