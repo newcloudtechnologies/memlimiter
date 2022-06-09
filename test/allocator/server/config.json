@@ -4,7 +4,7 @@
       "rss_limit": "1G",
       "danger_zone_gogc": 50,
       "danger_zone_throttling": 90,
-      "period": "5s",
+      "period": "1s",
       "component_proportional": {
         "coefficient": 20,
         "window_size": 20

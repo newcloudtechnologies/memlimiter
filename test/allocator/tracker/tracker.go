@@ -50,10 +50,8 @@ func (tr *Tracker) makeReport() (*report, error) {
 	}
 
 	out.utilization = mlStats.Controller.MemoryBudget.Utilization
-	// if mlStats.Backpressure.ControlParameters != nil {
 	out.gogc = mlStats.Backpressure.ControlParameters.GOGC
 	out.throttling = mlStats.Backpressure.ControlParameters.ThrottlingPercentage
-	// }
 
 	return out, nil
 }
@@ -103,7 +101,7 @@ func (tr *Tracker) Quit() {
 }
 
 func NewTrackerFromConfig(logger logr.Logger, cfg *Config, memLimiter memlimiter.Service) (*Tracker, error) {
-	fd, err := os.OpenFile(cfg.Path, os.O_CREATE|os.O_APPEND|os.O_WRONLY|os.O_SYNC, 0644)
+	fd, err := os.OpenFile(cfg.Path, os.O_CREATE|os.O_APPEND|os.O_WRONLY|os.O_SYNC|os.O_TRUNC, 0644)
 	if err != nil {
 		return nil, errors.Wrap(err, "open file")
 	}
