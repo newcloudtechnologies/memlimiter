@@ -13,12 +13,12 @@ import (
 	"github.com/newcloudtechnologies/memlimiter/utils/breaker"
 )
 
-// ServiceStatsSubscription - service stats subscription interface.
+// ServiceStatsSubscription - service tracker subscription interface.
 // There is a default implementation, but if you use Cgo in your application,
 // it's strongly recommended to implement this interface on your own, because
-// you need to provide custom stats containing information on Cgo memory consumption.
+// you need to provide custom tracker containing information on Cgo memory consumption.
 type ServiceStatsSubscription interface {
-	// Updates returns outgoing stream of service stats.
+	// Updates returns outgoing stream of service tracker.
 	Updates() <-chan ServiceStats
 	// Quit terminates program.
 	Quit()
@@ -43,7 +43,7 @@ func (s *subscriptionDefault) makeServiceStats() ServiceStats {
 	return serviceStatsDefault{nextGC: ms.NextGC}
 }
 
-// NewSubscriptionDefault - default implementation of service stats subscription.
+// NewSubscriptionDefault - default implementation of service tracker subscription.
 func NewSubscriptionDefault(period time.Duration) ServiceStatsSubscription {
 	ss := &subscriptionDefault{
 		outChan: make(chan ServiceStats),

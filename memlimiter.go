@@ -33,12 +33,12 @@ func (s *serviceImpl) Middleware() middleware.Middleware { return s.middleware }
 func (s *serviceImpl) GetStats() (*stats.MemLimiterStats, error) {
 	controllerStats, err := s.controller.GetStats()
 	if err != nil {
-		return nil, errors.Wrap(err, "controller stats")
+		return nil, errors.Wrap(err, "controller tracker")
 	}
 
 	backpressureStats, err := s.backpressureOperator.GetStats()
 	if err != nil {
-		return nil, errors.Wrap(err, "backpressure stats")
+		return nil, errors.Wrap(err, "backpressure tracker")
 	}
 
 	return &stats.MemLimiterStats{
@@ -68,18 +68,22 @@ func NewServiceFromConfig(
 	}
 
 	if statsSubscription == nil {
-		return nil, errors.New("nil stats subscription passed")
+		return nil, errors.New("nil tracker subscription passed")
 	}
 
 	backpressureOperator := backpressure.NewOperator(logger)
 
-	c := nextgc.NewControllerFromConfig(
+	c, err := nextgc.NewControllerFromConfig(
 		logger,
 		cfg.ControllerNextGC,
 		statsSubscription,
 		backpressureOperator,
 		applicationTerminator,
 	)
+
+	if err != nil {
+		return nil, errors.Wrap(err, "new controller from config")
+	}
 
 	return &serviceImpl{
 		middleware:           middleware.NewMiddleware(logger, backpressureOperator),

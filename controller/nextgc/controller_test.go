@@ -63,7 +63,7 @@ func TestController(t *testing.T) {
 
 	var serviceStatsContainer atomic.Value
 
-	// The stream of stats.ServiceStats instances
+	// The stream of tracker.ServiceStats instances
 	go func() {
 		ticker := time.NewTicker(servusPeriod)
 

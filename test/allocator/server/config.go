@@ -8,12 +8,14 @@ package server
 
 import (
 	"github.com/newcloudtechnologies/memlimiter"
+	"github.com/newcloudtechnologies/memlimiter/test/allocator/tracker"
 	"github.com/pkg/errors"
 )
 
 // Config - a top-level service configuration.
 type Config struct {
-	MemLimiter     *memlimiter.Config `json:"memlimiter"` //nolint:tagliatelle
+	MemLimiter     *memlimiter.Config `json:"memLimiter"` //nolint:tagliatelle
+	Tracker        *tracker.Config    `json:"tracker"`
 	ListenEndpoint string             `json:"listen_endpoint"`
 }
 
@@ -21,6 +23,10 @@ type Config struct {
 func (c *Config) Prepare() error {
 	if c.ListenEndpoint == "" {
 		return errors.New("listen endpoint is empty")
+	}
+
+	if c.Tracker == nil {
+		return errors.New("empty tracker")
 	}
 
 	return nil

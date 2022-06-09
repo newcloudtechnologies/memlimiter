@@ -15,12 +15,12 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/newcloudtechnologies/memlimiter"
 	"github.com/newcloudtechnologies/memlimiter/stats"
+	"github.com/newcloudtechnologies/memlimiter/test/allocator/schema"
+	"github.com/newcloudtechnologies/memlimiter/test/allocator/tracker"
 	"github.com/newcloudtechnologies/memlimiter/utils"
 	"github.com/newcloudtechnologies/memlimiter/utils/config/prepare"
-	"google.golang.org/grpc"
-
-	"github.com/newcloudtechnologies/memlimiter/test/allocator/schema"
 	"github.com/pkg/errors"
+	"google.golang.org/grpc"
 )
 
 // Server represents Allocator service interface.
@@ -40,7 +40,8 @@ var _ Server = (*serverImpl)(nil)
 
 type serverImpl struct {
 	schema.UnimplementedAllocatorServer
-	ml         memlimiter.Service
+	memLimiter memlimiter.Service
+	tracker    *tracker.Tracker
 	cfg        *Config
 	grpcServer *grpc.Server
 	logger     logr.Logger
@@ -94,7 +95,7 @@ func (srv *serverImpl) Run() error {
 
 func (srv *serverImpl) GRPCServer() *grpc.Server { return srv.grpcServer }
 
-func (srv *serverImpl) MemLimiter() memlimiter.Service { return srv.ml }
+func (srv *serverImpl) MemLimiter() memlimiter.Service { return srv.memLimiter }
 
 func (srv *serverImpl) Quit() {
 	srv.logger.Info("terminating server")
@@ -107,7 +108,7 @@ func NewAllocatorServer(logger logr.Logger, cfg *Config, options ...grpc.ServerO
 		return nil, errors.Wrap(err, "configs prepare")
 	}
 
-	ml, err := memlimiter.NewServiceFromConfig(
+	memLimiter, err := memlimiter.NewServiceFromConfig(
 		logger,
 		cfg.MemLimiter,
 		utils.NewUngracefulApplicationTerminator(logger),
@@ -115,19 +116,25 @@ func NewAllocatorServer(logger logr.Logger, cfg *Config, options ...grpc.ServerO
 	)
 
 	if err != nil {
-		return nil, errors.Wrap(err, "new memlimiter from config")
+		return nil, errors.Wrap(err, "new MemLimiter from config")
+	}
+
+	tr, err := tracker.NewTrackerFromConfig(logger, cfg.Tracker, memLimiter)
+	if err != nil {
+		return nil, errors.Wrap(err, "new tracker from config")
 	}
 
 	options = append(options,
-		grpc.UnaryInterceptor(ml.Middleware().GRPC().MakeUnaryServerInterceptor()),
-		grpc.StreamInterceptor(ml.Middleware().GRPC().MakeStreamServerInterceptor()),
+		grpc.UnaryInterceptor(memLimiter.Middleware().GRPC().MakeUnaryServerInterceptor()),
+		grpc.StreamInterceptor(memLimiter.Middleware().GRPC().MakeStreamServerInterceptor()),
 	)
 
 	srv := &serverImpl{
 		logger:     logger,
 		cfg:        cfg,
-		ml:         ml,
+		memLimiter: memLimiter,
 		grpcServer: grpc.NewServer(options...),
+		tracker:    tr,
 	}
 
 	schema.RegisterAllocatorServer(srv.grpcServer, srv)

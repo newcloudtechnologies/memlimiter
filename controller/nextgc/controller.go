@@ -27,7 +27,7 @@ import (
 //
 //nolint:govet
 type controllerImpl struct {
-	input                 stats.ServiceStatsSubscription         // input: service stats subscription.
+	input                 stats.ServiceStatsSubscription         // input: service tracker subscription.
 	backpressureOperator  backpressure.Operator                  // output: write control parameters here
 	applicationTerminator memlimiter_utils.ApplicationTerminator // output: used in case of emergency stop
 
@@ -84,7 +84,7 @@ func (c *controllerImpl) loop() {
 	for {
 		select {
 		case serviceStats := <-c.input.Updates():
-			// Update controller state every time we receive the actual stats about the process.
+			// Update controller state every time we receive the actual tracker about the process.
 			if err := c.updateState(serviceStats); err != nil {
 				c.logger.Error(err, "update state")
 				// Impossibility to compute control parameters is a fatal error,
@@ -216,12 +216,6 @@ func (c *controllerImpl) updateControlParameterThrottling() {
 }
 
 func (c *controllerImpl) applyControlValue() error {
-	if c.controlParameters == nil {
-		c.logger.Info("control parameters are not ready yet")
-
-		return nil
-	}
-
 	if err := c.backpressureOperator.SetControlParameters(c.controlParameters); err != nil {
 		return errors.Wrapf(err, "set control parameters: %v", c.controlParameters)
 	}
@@ -263,7 +257,7 @@ func NewControllerFromConfig(
 	input stats.ServiceStatsSubscription,
 	backpressureOperator backpressure.Operator,
 	applicationTerminator memlimiter_utils.ApplicationTerminator,
-) controller.Controller {
+) (controller.Controller, error) {
 	c := &controllerImpl{
 		input:                 input,
 		backpressureOperator:  backpressureOperator,
@@ -271,14 +265,22 @@ func NewControllerFromConfig(
 		pValue:                0,
 		sumValue:              0,
 		applicationTerminator: applicationTerminator,
-		controlParameters:     nil,
-		getStatsChan:          make(chan *getStatsRequest),
-		cfg:                   cfg,
-		logger:                logger,
-		breaker:               breaker.NewBreakerWithInitValue(1),
+		controlParameters: &stats.ControlParameters{
+			GOGC:                 backpressure.DefaultGOGC,
+			ThrottlingPercentage: backpressure.NoThrottling,
+		},
+		getStatsChan: make(chan *getStatsRequest),
+		cfg:          cfg,
+		logger:       logger,
+		breaker:      breaker.NewBreakerWithInitValue(1),
+	}
+
+	// initalize backpressure operator with default control signal
+	if err := c.applyControlValue(); err != nil {
+		return nil, errors.Wrap(err, "apply control value")
 	}
 
 	go c.loop()
 
-	return c
+	return c, nil
 }

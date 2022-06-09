@@ -18,7 +18,7 @@ type MemLimiterStats struct {
 	Backpressure *BackpressureStats
 }
 
-// ControllerStats - memory budget controller stats.
+// ControllerStats - memory budget controller tracker.
 type ControllerStats struct {
 	// MemoryBudget - common memory budget information
 	MemoryBudget *MemoryBudgetStats
@@ -26,7 +26,7 @@ type ControllerStats struct {
 	NextGC *ControllerNextGCStats
 }
 
-// MemoryBudgetStats - memory budget stats.
+// MemoryBudgetStats - memory budget tracker.
 type MemoryBudgetStats struct {
 	// SpecialConsumers - specialized memory consumers (like CGO) statistics.
 	SpecialConsumers *SpecialConsumersStats

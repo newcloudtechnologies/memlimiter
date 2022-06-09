@@ -35,6 +35,6 @@ type serviceStatsDefault struct {
 func (s serviceStatsDefault) NextGC() uint64 { return s.nextGC }
 
 func (s serviceStatsDefault) PredefinedConsumers() (*ConsumptionReport, error) {
-	// don't forget to put real stats of your service in your own implementation
+	// don't forget to put real tracker of your service in your own implementation
 	return nil, nil
 }

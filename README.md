@@ -77,4 +77,3 @@ Refer to the [example service](test/allocator/server/server.go).
 Refer to the [example service](test/allocator/server/server.go).
 
 You must also provide your own `stats.ServiceStatsSubscription` and `stats.ServiceStats` implementations. The latter one must return non-nil `stats.ConsumptionReport` instances if you want MemLimiter to consider allocations made outside of Go runtime allocator and estimate memory utilization correctly.
-c
