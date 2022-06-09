@@ -1,6 +1,7 @@
 #  Copyright (c) New Cloud Technologies, Ltd. 2013-2022.
 #  Author: Vitaly Isaev <vitaly.isaev@myoffice.team>
 #  License: https://github.com/newcloudtechnologies/memlimiter/blob/master/LICENSE
+
 import os
 from datetime import datetime
 from pathlib import Path
@@ -56,7 +57,7 @@ class ServerConfigRenderer:
     {%  endif %}
   "listen_endpoint": "0.0.0.0:1988",
   "tracker": {
-    "path": "/tmp/tracker.csv",
+    "path": "/etc/allocator/tracker.csv",
     "period": "1s"
   }
 }
@@ -108,6 +109,14 @@ class DockerClient:
             detach=True,
         )
         print(container)
+
+        _, logs = container.exec_run(
+            cmd='/usr/local/bin/allocator perf -c /etc/allocator/perf_config.json',
+            stream=True,
+        )
+
+        for log in logs:
+            print(log)
 
 
 def run_session(
