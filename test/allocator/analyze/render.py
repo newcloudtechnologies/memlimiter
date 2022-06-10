@@ -1,21 +1,17 @@
 #  Copyright (c) New Cloud Technologies, Ltd. 2013-2022.
 #  Author: Vitaly Isaev <vitaly.isaev@myoffice.team>
 #  License: https://github.com/newcloudtechnologies/memlimiter/blob/master/LICENSE
+import os
 
 import matplotlib.pyplot as plt
 import matplotlib.ticker as mtick
-import pandas as pd
+
+from report import Report
 
 
-def prepare() -> pd.DataFrame:
-    df = pd.read_csv('/tmp/tracker.csv')
-    df['timestamp'] = pd.to_datetime(df['timestamp'])
-    df['utilization'] *= 100
-    df['elapsed_time'] = (df['timestamp'] - df['timestamp'].min()).apply(lambda x: x.seconds + x.microseconds / 1000000)
-    return df
+def single_report(report: Report):
+    df = report.df
 
-
-def render(df: pd.DataFrame):
     fig, ax1 = plt.subplots()
 
     color = 'tab:red'
@@ -32,14 +28,6 @@ def render(df: pd.DataFrame):
     ax2.yaxis.set_tick_params(labelcolor=color)
     ax2.set_ylabel('GOGC', color=color)
 
-    fig.tight_layout()
+    # fig.tight_layout()
     fig.savefig('/tmp/report.png', transparent=False)
 
-
-def main():
-    df = prepare()
-    render(df)
-
-
-if __name__ == '__main__':
-    main()

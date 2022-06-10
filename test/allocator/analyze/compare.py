@@ -1,7 +1,6 @@
 #  Copyright (c) New Cloud Technologies, Ltd. 2013-2022.
 #  Author: Vitaly Isaev <vitaly.isaev@myoffice.team>
 #  License: https://github.com/newcloudtechnologies/memlimiter/blob/master/LICENSE
-
 import os
 from datetime import datetime
 from pathlib import Path
@@ -10,8 +9,11 @@ from typing import Final
 import docker
 import jinja2
 
+from report import Report
+from test_case import TestCase
+
 image_tag: Final = 'allocator'
-dockerfile_path: Final = '..'
+dockerfile_path: Final = 'test/allocator'
 
 
 class PerfConfigRenderer:
@@ -47,7 +49,7 @@ class ServerConfigRenderer:
       "rss_limit": "{{ rss_limit }}",
       "danger_zone_gogc": 50,
       "danger_zone_throttling": 90,
-      "period": "1s",
+      "period": "100ms",
       "component_proportional": {
         "coefficient": {{ coefficient }},
         "window_size": 20
@@ -58,7 +60,7 @@ class ServerConfigRenderer:
   "listen_endpoint": "0.0.0.0:1988",
   "tracker": {
     "path": "/etc/allocator/tracker.csv",
-    "period": "1s"
+    "period": "100ms"
   }
 }
     '''
@@ -69,14 +71,12 @@ class ServerConfigRenderer:
 
     def render(self,
                path: os.PathLike,
-               unlimited: bool = False,
-               rss_limit: str = "1G",
-               coefficient: int = 20,
+               test_case: TestCase,
                ):
         out = self.__template.render(
-            unlimited=unlimited,
-            rss_limit=rss_limit,
-            coefficient=coefficient,
+            unlimited=test_case.unlimited,
+            rss_limit=test_case.rss_limit,
+            coefficient=test_case.coefficient,
         )
 
         with open(path, "w") as f:
@@ -108,7 +108,6 @@ class DockerClient:
             },
             detach=True,
         )
-        print(container)
 
         _, logs = container.exec_run(
             cmd='/usr/local/bin/allocator perf -c /etc/allocator/perf_config.json',
@@ -124,10 +123,8 @@ def run_session(
         server_config_renderer: ServerConfigRenderer,
         perf_config_renderer: PerfConfigRenderer,
         root_dir: os.PathLike,
-        unlimited: bool = False,
-        rss_limit: str = "1G",
-        coefficient: int = 20,
-):
+        test_case: TestCase,
+) -> Report:
     # make session directory
     now = datetime.now()
     session_dir_path = Path(root_dir, f'allocator_{now.hour}{now.minute}{now.second}')
@@ -135,17 +132,20 @@ def run_session(
 
     server_config_path = Path(session_dir_path, "server_config.json")
     server_config_renderer.render(path=server_config_path,
-                                  unlimited=unlimited,
-                                  rss_limit=rss_limit,
-                                  coefficient=coefficient)
+                                  test_case=test_case)
 
     perf_config_path = Path(session_dir_path, "perf_config.json")
     perf_config_renderer.render(path=perf_config_path)
 
+    # run test session within Docker container
     docker_client.execute(
-        mem_limit=rss_limit,
+        mem_limit=test_case.rss_limit,
         session_dir_path=session_dir_path,
     )
+
+    # parse output
+    tracker_path = Path(session_dir_path, 'tracker.csv')
+    return Report.from_file(test_case=test_case, path=tracker_path)
 
 
 def main():
@@ -153,15 +153,17 @@ def main():
     server_config_renderer = ServerConfigRenderer()
     perf_config_renderer = PerfConfigRenderer()
 
-    run_session(
+    test_case = TestCase(unlimited=False, rss_limit='1G', coefficient=20)
+
+    report = run_session(
         docker_client=docker_client,
         server_config_renderer=server_config_renderer,
         perf_config_renderer=perf_config_renderer,
         root_dir=Path('/tmp/allocator'),
-        unlimited=False,
-        rss_limit='1G',
-        coefficient=20,
+        test_case=test_case,
     )
+
+    print(report)
 
 
 if __name__ == '__main__':

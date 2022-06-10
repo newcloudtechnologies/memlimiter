@@ -2,3 +2,4 @@
 test/infra/allocator/config.json
 test/allocator/allocator
 venv
+__pycache__
