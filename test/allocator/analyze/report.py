@@ -3,6 +3,7 @@
 #  License: https://github.com/newcloudtechnologies/memlimiter/blob/master/LICENSE
 import dataclasses
 import os
+from pathlib import Path
 
 import pandas as pd
 
@@ -29,3 +30,7 @@ class Report:
         df['elapsed_time'] = (df['timestamp'] - df['timestamp'].min()).apply(
             lambda x: x.seconds + x.microseconds / 1000000)
         return df
+
+    @property
+    def plot_file_path(self) -> os.PathLike:
+        return Path(self.test_case.session_dir_path, "report.png")

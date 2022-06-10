@@ -9,6 +9,7 @@ from typing import Final
 import docker
 import jinja2
 
+import render
 from report import Report
 from test_case import TestCase
 
@@ -100,6 +101,7 @@ class DockerClient:
             name='allocator',
             image=image_tag,
             mem_limit=mem_limit,
+            auto_remove=True,
             volumes={
                 str(session_dir_path): {
                     'bind': '/etc/allocator',
@@ -122,29 +124,26 @@ def run_session(
         docker_client: DockerClient,
         server_config_renderer: ServerConfigRenderer,
         perf_config_renderer: PerfConfigRenderer,
-        root_dir: os.PathLike,
         test_case: TestCase,
 ) -> Report:
     # make session directory
-    now = datetime.now()
-    session_dir_path = Path(root_dir, f'allocator_{now.hour}{now.minute}{now.second}')
-    os.makedirs(session_dir_path, mode=0o777)
+    os.makedirs(test_case.session_dir_path, mode=0o777)
 
-    server_config_path = Path(session_dir_path, "server_config.json")
+    server_config_path = Path(test_case.session_dir_path, "server_config.json")
     server_config_renderer.render(path=server_config_path,
                                   test_case=test_case)
 
-    perf_config_path = Path(session_dir_path, "perf_config.json")
+    perf_config_path = Path(test_case.session_dir_path, "perf_config.json")
     perf_config_renderer.render(path=perf_config_path)
 
     # run test session within Docker container
     docker_client.execute(
         mem_limit=test_case.rss_limit,
-        session_dir_path=session_dir_path,
+        session_dir_path=test_case.session_dir_path,
     )
 
     # parse output
-    tracker_path = Path(session_dir_path, 'tracker.csv')
+    tracker_path = Path(test_case.session_dir_path, 'tracker.csv')
     return Report.from_file(test_case=test_case, path=tracker_path)
 
 
@@ -152,18 +151,25 @@ def main():
     docker_client = DockerClient()
     server_config_renderer = ServerConfigRenderer()
     perf_config_renderer = PerfConfigRenderer()
+    root_dir = Path('/tmp/allocator')
 
-    test_case = TestCase(unlimited=False, rss_limit='1G', coefficient=20)
+    # make test case
+    now = datetime.now()
+    session_dir_path = Path(root_dir, f'allocator_{now.hour}{now.minute}{now.second}')
+    test_case = TestCase(session_dir_path=session_dir_path,
+                         unlimited=False,
+                         rss_limit='1G',
+                         coefficient=20)
 
+    # execute test case
     report = run_session(
         docker_client=docker_client,
         server_config_renderer=server_config_renderer,
         perf_config_renderer=perf_config_renderer,
-        root_dir=Path('/tmp/allocator'),
         test_case=test_case,
     )
 
-    print(report)
+    render.single_report(report)
 
 
 if __name__ == '__main__':

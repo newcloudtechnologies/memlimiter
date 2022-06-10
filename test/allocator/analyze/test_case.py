@@ -7,6 +7,7 @@ import os
 
 @dataclasses.dataclass
 class TestCase:
+    session_dir_path: os.PathLike
     unlimited: bool
     rss_limit: str
     coefficient: int

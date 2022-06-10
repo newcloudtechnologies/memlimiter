@@ -29,5 +29,5 @@ def single_report(report: Report):
     ax2.set_ylabel('GOGC', color=color)
 
     # fig.tight_layout()
-    fig.savefig('/tmp/report.png', transparent=False)
+    fig.savefig(report.plot_file_path, transparent=False)
 
