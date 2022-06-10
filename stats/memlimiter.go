@@ -30,6 +30,8 @@ type ControllerStats struct {
 type MemoryBudgetStats struct {
 	// SpecialConsumers - specialized memory consumers (like CGO) statistics.
 	SpecialConsumers *SpecialConsumersStats
+	// RSSActual - physical memory (RSS) current consumption [bytes].
+	RSSActual uint64
 	// RSSLimit - physical memory (RSS) consumption limit [bytes].
 	RSSLimit uint64
 	// GoAllocLimit - allocation limit for Go Runtime (with the except of CGO) [bytes].

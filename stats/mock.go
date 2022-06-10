@@ -17,6 +17,10 @@ type ServiceStatsMock struct {
 	mock.Mock
 }
 
+func (m *ServiceStatsMock) RSS() uint64 {
+	return m.Called().Get(0).(uint64)
+}
+
 func (m *ServiceStatsMock) NextGC() uint64 {
 	return m.Called().Get(0).(uint64)
 }

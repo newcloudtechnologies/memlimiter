@@ -112,7 +112,7 @@ func NewAllocatorServer(logger logr.Logger, cfg *Config, options ...grpc.ServerO
 		logger,
 		cfg.MemLimiter,
 		utils.NewUngracefulApplicationTerminator(logger),
-		stats.NewSubscriptionDefault(time.Second),
+		stats.NewSubscriptionDefault(logger, time.Second),
 	)
 
 	if err != nil {
@@ -124,10 +124,12 @@ func NewAllocatorServer(logger logr.Logger, cfg *Config, options ...grpc.ServerO
 		return nil, errors.Wrap(err, "new tracker from config")
 	}
 
-	options = append(options,
-		grpc.UnaryInterceptor(memLimiter.Middleware().GRPC().MakeUnaryServerInterceptor()),
-		grpc.StreamInterceptor(memLimiter.Middleware().GRPC().MakeStreamServerInterceptor()),
-	)
+	if cfg.MemLimiter != nil {
+		options = append(options,
+			grpc.UnaryInterceptor(memLimiter.Middleware().GRPC().MakeUnaryServerInterceptor()),
+			grpc.StreamInterceptor(memLimiter.Middleware().GRPC().MakeStreamServerInterceptor()),
+		)
+	}
 
 	srv := &serverImpl{
 		logger:     logger,

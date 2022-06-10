@@ -40,6 +40,7 @@ type controllerImpl struct {
 	sumValue          float64                  // final output
 	goAllocLimit      uint64                   // memory budget [bytes]
 	utilization       float64                  // memory budget utilization [percents]
+	rss               uint64                   // physical memory actual consumption
 	consumptionReport *stats.ConsumptionReport // latest special memory consumers report
 	controlParameters *stats.ControlParameters // latest control parameters value
 
@@ -154,6 +155,9 @@ func (c *controllerImpl) updateUtilization(serviceStats stats.ServiceStats) {
 	// If NextGC becomes higher than the allocation limit, the GC will never run, because
 	// OOM will happen first. That's why we need to push away Go process from the allocation limit.
 	c.utilization = float64(serviceStats.NextGC()) / float64(c.goAllocLimit)
+
+	// Just for the history, save actual RSS value
+	c.rss = serviceStats.RSS()
 }
 
 func (c *controllerImpl) updateControlValues() error {
@@ -226,6 +230,7 @@ func (c *controllerImpl) applyControlValue() error {
 func (c *controllerImpl) aggregateStats() *stats.ControllerStats {
 	res := &stats.ControllerStats{
 		MemoryBudget: &stats.MemoryBudgetStats{
+			RSSActual:    c.rss,
 			RSSLimit:     c.cfg.RSSLimit.Value,
 			GoAllocLimit: c.goAllocLimit,
 			Utilization:  c.utilization,
@@ -275,7 +280,7 @@ func NewControllerFromConfig(
 		breaker:      breaker.NewBreakerWithInitValue(1),
 	}
 
-	// initalize backpressure operator with default control signal
+	// initialize backpressure operator with default control signal
 	if err := c.applyControlValue(); err != nil {
 		return nil, errors.Wrap(err, "apply control value")
 	}

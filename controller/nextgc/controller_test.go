@@ -14,6 +14,7 @@ import (
 	"code.cloudfoundry.org/bytefmt"
 	"github.com/go-logr/logr/testr"
 	"github.com/newcloudtechnologies/memlimiter/stats"
+	"github.com/stretchr/testify/require"
 
 	"github.com/newcloudtechnologies/memlimiter/backpressure"
 	"github.com/newcloudtechnologies/memlimiter/utils"
@@ -110,7 +111,8 @@ func TestController(t *testing.T) {
 		},
 	)
 
-	c := NewControllerFromConfig(logger, cfg, subscriptionMock, backpressureOperatorMock, &utils.ApplicationTerminatorMock{})
+	c, err := NewControllerFromConfig(logger, cfg, subscriptionMock, backpressureOperatorMock, &utils.ApplicationTerminatorMock{})
+	require.NoError(t, err)
 
 	<-terminateChan
 

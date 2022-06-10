@@ -101,7 +101,6 @@ class DockerClient:
             name='allocator',
             image=image_tag,
             mem_limit=mem_limit,
-            auto_remove=True,
             volumes={
                 str(session_dir_path): {
                     'bind': '/etc/allocator',
@@ -120,6 +119,7 @@ class DockerClient:
             print(log)
 
         container.stop()
+        # container.remove()
 
 
 def run_session(

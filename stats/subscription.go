@@ -7,10 +7,14 @@
 package stats
 
 import (
+	"os"
 	"runtime"
 	"time"
 
+	"github.com/go-logr/logr"
 	"github.com/newcloudtechnologies/memlimiter/utils/breaker"
+	"github.com/pkg/errors"
+	"github.com/shirou/gopsutil/v3/process"
 )
 
 // ServiceStatsSubscription - service tracker subscription interface.
@@ -25,6 +29,8 @@ type ServiceStatsSubscription interface {
 }
 
 type subscriptionDefault struct {
+	logger  logr.Logger
+	pid     int32
 	outChan chan ServiceStats
 	breaker *breaker.Breaker
 	period  time.Duration
@@ -36,19 +42,34 @@ func (s *subscriptionDefault) Quit() {
 	s.breaker.ShutdownAndWait()
 }
 
-func (s *subscriptionDefault) makeServiceStats() ServiceStats {
+func (s *subscriptionDefault) makeServiceStats() (ServiceStats, error) {
 	ms := &runtime.MemStats{}
 	runtime.ReadMemStats(ms)
 
-	return serviceStatsDefault{nextGC: ms.NextGC}
+	pr, err := process.NewProcess(s.pid)
+	if err != nil {
+		return nil, errors.Wrap(err, "new pr")
+	}
+
+	processMemoryInfo, err := pr.MemoryInfoEx()
+	if err != nil {
+		return nil, errors.Wrap(err, "process memory info ex")
+	}
+
+	return serviceStatsDefault{
+		rss:    processMemoryInfo.RSS,
+		nextGC: ms.NextGC,
+	}, nil
 }
 
 // NewSubscriptionDefault - default implementation of service tracker subscription.
-func NewSubscriptionDefault(period time.Duration) ServiceStatsSubscription {
+func NewSubscriptionDefault(logger logr.Logger, period time.Duration) ServiceStatsSubscription {
 	ss := &subscriptionDefault{
 		outChan: make(chan ServiceStats),
 		period:  period,
 		breaker: breaker.NewBreakerWithInitValue(1),
+		pid:     int32(os.Getpid()),
+		logger:  logger,
 	}
 
 	go func() {
@@ -60,8 +81,14 @@ func NewSubscriptionDefault(period time.Duration) ServiceStatsSubscription {
 		for {
 			select {
 			case <-ticker.C:
+				out, err := ss.makeServiceStats()
+				if err != nil {
+					logger.Error(err, "make service stats")
+					break
+				}
+
 				select {
-				case ss.outChan <- ss.makeServiceStats():
+				case ss.outChan <- out:
 				case <-ss.breaker.Done():
 					return
 				}

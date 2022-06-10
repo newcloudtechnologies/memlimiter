@@ -52,8 +52,8 @@ func (s *serviceImpl) Quit() {
 	s.statsSubscription.Quit()
 }
 
-// NewServiceFromConfig - main entrypoint for MemLimiter.
-func NewServiceFromConfig(
+// newServiceImpl - main entrypoint for MemLimiter.
+func newServiceImpl(
 	logger logr.Logger,
 	cfg *Config,
 	applicationTerminator utils.ApplicationTerminator,

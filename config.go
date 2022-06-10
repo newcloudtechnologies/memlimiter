@@ -23,6 +23,10 @@ type Config struct {
 
 // Prepare validates config.
 func (c *Config) Prepare() error {
+	if c == nil {
+		return nil
+	}
+
 	if c.ControllerNextGC == nil {
 		return errors.New("empty ControllerNextGC")
 	}

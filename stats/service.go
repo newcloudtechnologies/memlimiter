@@ -8,6 +8,8 @@ package stats
 
 // ServiceStats represents the actual process statistics.
 type ServiceStats interface {
+	// RSS returns current RSS value [bytes]
+	RSS() uint64
 	// NextGC returns current NextGC value [bytes]
 	NextGC() uint64
 	// PredefinedConsumers provides statistical information about the predefined memory consumers that contribute
@@ -28,9 +30,14 @@ type ConsumptionReport struct {
 	Cgo map[string]uint64
 }
 
+var _ ServiceStats = (*serviceStatsDefault)(nil)
+
 type serviceStatsDefault struct {
+	rss    uint64
 	nextGC uint64
 }
+
+func (s serviceStatsDefault) RSS() uint64 { return s.rss }
 
 func (s serviceStatsDefault) NextGC() uint64 { return s.nextGC }
 

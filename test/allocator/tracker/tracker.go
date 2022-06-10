@@ -15,7 +15,6 @@ import (
 	"github.com/newcloudtechnologies/memlimiter"
 	"github.com/newcloudtechnologies/memlimiter/utils/breaker"
 	"github.com/pkg/errors"
-	"github.com/shirou/gopsutil/v3/process"
 )
 
 type Tracker struct {
@@ -32,26 +31,20 @@ func (tr *Tracker) makeReport() (*report, error) {
 
 	out.timestamp = time.Now().Format(time.RFC3339Nano)
 
-	pr, err := process.NewProcess(int32(os.Getpid()))
-	if err != nil {
-		return nil, errors.Wrap(err, "new pr")
-	}
-
-	processMemoryInfo, err := pr.MemoryInfoEx()
-	if err != nil {
-		return nil, errors.Wrap(err, "process memory info ex")
-	}
-
-	out.rss = processMemoryInfo.RSS
-
 	mlStats, err := tr.memLimiter.GetStats()
 	if err != nil {
 		return nil, errors.Wrap(err, "memlimiter stats")
 	}
 
-	out.utilization = mlStats.Controller.MemoryBudget.Utilization
-	out.gogc = mlStats.Backpressure.ControlParameters.GOGC
-	out.throttling = mlStats.Backpressure.ControlParameters.ThrottlingPercentage
+	if mlStats != nil {
+		out.rss = mlStats.Controller.MemoryBudget.RSSActual
+		out.utilization = mlStats.Controller.MemoryBudget.Utilization
+
+		if mlStats.Backpressure != nil {
+			out.gogc = mlStats.Backpressure.ControlParameters.GOGC
+			out.throttling = mlStats.Backpressure.ControlParameters.ThrottlingPercentage
+		}
+	}
 
 	return out, nil
 }
