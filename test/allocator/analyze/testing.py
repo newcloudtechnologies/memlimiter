@@ -29,7 +29,7 @@ class Session:
 
 def make_sessions(root_dir: os.PathLike) -> Iterable[Session]:
     cases = (
-        Params(unlimited=True, rss_limit='1G'),
+        # Params(unlimited=True, rss_limit='1G'),
         Params(unlimited=False, rss_limit='1G', coefficient=20),
     )
 
