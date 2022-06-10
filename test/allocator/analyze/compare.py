@@ -119,6 +119,8 @@ class DockerClient:
         for log in logs:
             print(log)
 
+        container.stop()
+
 
 def run_session(
         docker_client: DockerClient,

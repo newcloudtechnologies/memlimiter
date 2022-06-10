@@ -17,6 +17,7 @@ def single_report(report: Report):
     color = 'tab:red'
     ax1.plot(df['elapsed_time'], df['utilization'], color=color)
     ax1.set_ylabel('Memory budget utilization, %', color=color)
+    ax1.set_ylim(-5, 105)
     ax1.yaxis.set_tick_params(labelcolor=color)
     ax1.yaxis.set_major_formatter(mtick.PercentFormatter())
     ax1.set_xlabel('Time, seconds')
@@ -27,6 +28,7 @@ def single_report(report: Report):
     ax2.plot(df['elapsed_time'], df['gogc'], color=color)
     ax2.yaxis.set_tick_params(labelcolor=color)
     ax2.set_ylabel('GOGC', color=color)
+    ax2.set_ylim(-5, 105)
 
     # fig.tight_layout()
     fig.savefig(report.plot_file_path, transparent=False)
