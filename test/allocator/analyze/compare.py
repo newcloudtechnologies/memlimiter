@@ -23,7 +23,7 @@ class PerfConfigRenderer:
 {
   "endpoint": "localhost:1988",
   "rps": 100,
-  "load_duration": "30s",
+  "load_duration": "10s",
   "allocation_size": "1M",
   "pause_duration": "5s",
   "request_timeout": "1m"
