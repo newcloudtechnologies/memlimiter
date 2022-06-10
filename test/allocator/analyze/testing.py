@@ -12,6 +12,7 @@ class Params:
     unlimited: bool
     rss_limit: str = '1G'
     coefficient: int = 20
+    load_duration: str = '60s'
 
     def __str__(self) -> str:
         return f"unlimited_{self.unlimited}_rss_limit_{self.rss_limit}_coefficient_{self.coefficient}"
@@ -29,8 +30,16 @@ class Session:
 
 def make_sessions(root_dir: os.PathLike) -> Iterable[Session]:
     cases = (
-        # Params(unlimited=True, rss_limit='1G'),
-        Params(unlimited=False, rss_limit='1G', coefficient=20),
+        Params(unlimited=True, load_duration="60s", rss_limit='1G'),
+        Params(unlimited=False, load_duration="60s", rss_limit='1G', coefficient=1),
+        Params(unlimited=False, load_duration="60s", rss_limit='1G', coefficient=10),
+        Params(unlimited=False, load_duration="60s", rss_limit='1G', coefficient=20),
+        Params(unlimited=False, load_duration="60s", rss_limit='1G', coefficient=30),
     )
+
+    # TODO: remove after debug
+    # cases = (
+    #     Params(unlimited=False, rss_limit='1G', coefficient=1, load_duration='20s'),
+    # )
 
     return (Session(case=tc, root_dir=root_dir) for tc in cases)

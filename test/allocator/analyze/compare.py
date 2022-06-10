@@ -23,7 +23,7 @@ class PerfConfigRenderer:
 {
   "endpoint": "localhost:1988",
   "rps": 100,
-  "load_duration": "10s",
+  "load_duration": "{{ load_duration }}",
   "allocation_size": "1M",
   "pause_duration": "5s",
   "request_timeout": "1m"
@@ -35,8 +35,10 @@ class PerfConfigRenderer:
         self.__template = jinja2.Template(self.__t)
 
     def render(self,
-               path: os.PathLike):
-        out = self.__template.render()
+               path: os.PathLike,
+               params: Params,
+               ):
+        out = self.__template.render(load_duration=params.load_duration)
 
         with open(path, "w") as f:
             f.write(out)
@@ -142,7 +144,8 @@ def run_session(
                                   params=session.params)
 
     perf_config_path = Path(session.dir_path, "perf_config.json")
-    perf_config_renderer.render(path=perf_config_path)
+    perf_config_renderer.render(path=perf_config_path,
+                                params=session.params)
 
     # run test session within Docker container
     docker_client.execute(
