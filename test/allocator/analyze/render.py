@@ -51,15 +51,18 @@ def single_report(report: Report):
     # legend
     ls = l0 + l1 + l2
     labels = [l.get_label() for l in ls]
-    ax.legend(ls, labels, framealpha=0.1)
+
+    if report.session.params.coefficient == 1:
+        ax.legend(ls, labels, loc=7)
+    else:
+        ax.legend(ls, labels, loc=0)
 
     # title
     if report.session.params.unlimited:
         title = "MemLimiter disabled"
     else:
         coefficient = report.session.params.coefficient
-        rss_limit = report.session.params.rss_limit
-        title = f'MemLimiter enabled, $RSS_{{limit}}$ = {rss_limit}, $K_{{p}} = {coefficient}$'
+        title = f'MemLimiter enabled, $K_{{p}} = {coefficient}$'
     ax.title.set_text(title)
 
     fig.tight_layout()
@@ -77,8 +80,15 @@ def multiple_reports(reports: List[Report], path: os.PathLike):
     n = len(reports)
 
     colors = plt.cm.jet(np.linspace(0, 1, n))
-    for i, report in enumerate(colors):
-        ax.plot(report.df['elapsed_time'], report.df['rss'], color=colors[i])
+    for i, report in enumerate(reports):
+        if report.session.params.unlimited:
+            label = 'No limits'
+        else:
+            label = f'$K_{{p}} = {report.session.params.coefficient}$'
 
+        ax.plot(report.df['elapsed_time'], report.df['rss'], color=colors[n-1-i], label=label)
+
+    ax.legend()
+    ax.title.set_text('RSS consumption dependence on $K_{{p}}$')
     fig.tight_layout()
     fig.savefig(path, transparent=False)

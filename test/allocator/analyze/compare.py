@@ -167,15 +167,19 @@ def main():
     root_dir = Path('/tmp/allocator', f'allocator_{now.hour}{now.minute}{now.second}')
 
     sessions = make_sessions(root_dir)
-    for ss in sessions:
-        report = run_session(
+    reports = [
+        run_session(
             docker_client=docker_client,
             server_config_renderer=server_config_renderer,
             perf_config_renderer=perf_config_renderer,
-            session=ss,
-        )
+            session=ss)
+        for ss in sessions
+    ]
 
+    for report in reports:
         render.single_report(report)
+
+    render.multiple_reports(reports, Path(root_dir, 'reports.png'))
 
 
 if __name__ == '__main__':

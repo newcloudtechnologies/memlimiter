@@ -34,12 +34,11 @@ def make_sessions(root_dir: os.PathLike) -> Iterable[Session]:
         Params(unlimited=False, load_duration="60s", rss_limit='1G', coefficient=1),
         Params(unlimited=False, load_duration="60s", rss_limit='1G', coefficient=10),
         Params(unlimited=False, load_duration="60s", rss_limit='1G', coefficient=20),
-        Params(unlimited=False, load_duration="60s", rss_limit='1G', coefficient=30),
     )
 
     # TODO: remove after debug
     # cases = (
-    #     Params(unlimited=False, rss_limit='1G', coefficient=1, load_duration='20s'),
+    #     Params(unlimited=False, rss_limit='1G', coefficient=1, load_duration='60s'),
     # )
 
     return (Session(case=tc, root_dir=root_dir) for tc in cases)
