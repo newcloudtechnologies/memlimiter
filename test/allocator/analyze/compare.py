@@ -11,10 +11,11 @@ import jinja2
 
 import render
 from report import Report
-from test_case import TestCase
+from testing import Session, make_sessions, Params
 
 image_tag: Final = 'allocator'
 dockerfile_path: Final = 'test/allocator'
+container_name: Final = 'allocator'
 
 
 class PerfConfigRenderer:
@@ -72,12 +73,12 @@ class ServerConfigRenderer:
 
     def render(self,
                path: os.PathLike,
-               test_case: TestCase,
+               params: Params,
                ):
         out = self.__template.render(
-            unlimited=test_case.unlimited,
-            rss_limit=test_case.rss_limit,
-            coefficient=test_case.coefficient,
+            unlimited=params.unlimited,
+            rss_limit=params.rss_limit,
+            coefficient=params.coefficient,
         )
 
         with open(path, "w") as f:
@@ -97,8 +98,15 @@ class DockerClient:
             print(log)
 
     def execute(self, mem_limit: str, session_dir_path: os.PathLike):
+        try:
+            # drop container if exists
+            container = self.client.containers.get(container_name)
+            container.remove(force=True)
+        except docker.errors.NotFound:
+            pass
+
         container = self.client.containers.run(
-            name='allocator',
+            name=container_name,
             image=image_tag,
             mem_limit=mem_limit,
             volumes={
@@ -119,59 +127,52 @@ class DockerClient:
             print(log)
 
         container.stop()
-        # container.remove()
 
 
 def run_session(
         docker_client: DockerClient,
         server_config_renderer: ServerConfigRenderer,
         perf_config_renderer: PerfConfigRenderer,
-        test_case: TestCase,
+        session: Session,
 ) -> Report:
-    # make session directory
-    os.makedirs(test_case.session_dir_path, mode=0o777)
+    print(f">>> Start case: {session.params}")
 
-    server_config_path = Path(test_case.session_dir_path, "server_config.json")
+    server_config_path = Path(session.dir_path, "server_config.json")
     server_config_renderer.render(path=server_config_path,
-                                  test_case=test_case)
+                                  params=session.params)
 
-    perf_config_path = Path(test_case.session_dir_path, "perf_config.json")
+    perf_config_path = Path(session.dir_path, "perf_config.json")
     perf_config_renderer.render(path=perf_config_path)
 
     # run test session within Docker container
     docker_client.execute(
-        mem_limit=test_case.rss_limit,
-        session_dir_path=test_case.session_dir_path,
+        mem_limit=session.params.rss_limit,
+        session_dir_path=session.dir_path,
     )
 
     # parse output
-    tracker_path = Path(test_case.session_dir_path, 'tracker.csv')
-    return Report.from_file(test_case=test_case, path=tracker_path)
+    tracker_path = Path(session.dir_path, 'tracker.csv')
+    return Report.from_file(session=session, path=tracker_path)
 
 
 def main():
     docker_client = DockerClient()
     server_config_renderer = ServerConfigRenderer()
     perf_config_renderer = PerfConfigRenderer()
-    root_dir = Path('/tmp/allocator')
 
-    # make test case
     now = datetime.now()
-    session_dir_path = Path(root_dir, f'allocator_{now.hour}{now.minute}{now.second}')
-    test_case = TestCase(session_dir_path=session_dir_path,
-                         unlimited=False,
-                         rss_limit='1G',
-                         coefficient=20)
+    root_dir = Path('/tmp/allocator', f'allocator_{now.hour}{now.minute}{now.second}')
 
-    # execute test case
-    report = run_session(
-        docker_client=docker_client,
-        server_config_renderer=server_config_renderer,
-        perf_config_renderer=perf_config_renderer,
-        test_case=test_case,
-    )
+    sessions = make_sessions(root_dir)
+    for ss in sessions:
+        report = run_session(
+            docker_client=docker_client,
+            server_config_renderer=server_config_renderer,
+            perf_config_renderer=perf_config_renderer,
+            session=ss,
+        )
 
-    render.single_report(report)
+        render.single_report(report)
 
 
 if __name__ == '__main__':

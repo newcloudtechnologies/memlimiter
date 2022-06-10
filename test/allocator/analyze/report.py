@@ -7,19 +7,19 @@ from pathlib import Path
 
 import pandas as pd
 
-from test_case import TestCase
+from testing import Session
 
 
 @dataclasses.dataclass
 class Report:
     df: pd.DataFrame
-    test_case: TestCase
+    session: Session
 
     @classmethod
-    def from_file(cls, path: os.PathLike, test_case: TestCase):
+    def from_file(cls, path: os.PathLike, session: Session):
         return Report(
             df=Report.__parse_tracker_stats(path),
-            test_case=test_case,
+            session=session,
         )
 
     @staticmethod
@@ -33,4 +33,4 @@ class Report:
 
     @property
     def plot_file_path(self) -> os.PathLike:
-        return Path(self.test_case.session_dir_path, "report.png")
+        return Path(self.session.dir_path, "report.png")
