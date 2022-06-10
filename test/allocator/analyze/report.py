@@ -17,10 +17,12 @@ class Report:
 
     @classmethod
     def from_file(cls, path: os.PathLike, session: Session):
-        return Report(
+        out = Report(
             df=Report.__parse_tracker_stats(path),
             session=session,
         )
+
+        return out
 
     @staticmethod
     def __parse_tracker_stats(path: os.PathLike) -> pd.DataFrame:

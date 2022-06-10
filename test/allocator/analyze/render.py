@@ -72,6 +72,7 @@ def single_report(report: Report):
 def multiple_reports(reports: List[Report], path: os.PathLike):
     fig, ax = plt.subplots(figsize=(8, 6))
     ax.set_xlim(0, 60)
+    ax.set_xlabel('Time, seconds')
     ax.set_ylabel('RSS, bytes')
     ax.set_ylim(0, 1024 * 1024 * 1024)
     ax.set_yticks([ml * 1024 * 1024 for ml in (256, 512, 512 + 256, 1024)])
@@ -79,14 +80,15 @@ def multiple_reports(reports: List[Report], path: os.PathLike):
 
     n = len(reports)
 
-    colors = plt.cm.jet(np.linspace(0, 1, n))
-    for i, report in enumerate(reports):
+    colors = plt.cm.turbo(np.linspace(0, 1, n))
+    for i in range(n):
+        report = reports[n-1-i]
         if report.session.params.unlimited:
             label = 'No limits'
         else:
             label = f'$K_{{p}} = {report.session.params.coefficient}$'
 
-        ax.plot(report.df['elapsed_time'], report.df['rss'], color=colors[n-1-i], label=label)
+        ax.plot(report.df['elapsed_time'], report.df['rss'], color=colors[i], label=label)
 
     ax.legend()
     ax.title.set_text('RSS consumption dependence on $K_{{p}}$')

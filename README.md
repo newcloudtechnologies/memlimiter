@@ -48,12 +48,12 @@ Finally we convert the dimensionless quantity $Output$ into specific $GOGC$ (for
 
 
 $$ GC = \begin{cases}
-\displaystyle Output \ \ \ Utilization \gt DangeZoneGC \\
+\displaystyle Output \ \ \ Utilization \gt DangerZoneGC \\
 \displaystyle 100 \ \ \ \ \ \ \ \ \ \ otherwise \\
 \end{cases}$$
 
 $$ Throttling = \begin{cases}
-\displaystyle Output \ \ \ Utilization \gt DangeZoneThrottling \\
+\displaystyle Output \ \ \ Utilization \gt DangerZoneThrottling \\
 \displaystyle 0 \ \ \ \ \ \ \ \ \ \ \ \ \ \ otherwise \\
 \end{cases}$$
 
@@ -77,3 +77,14 @@ Refer to the [example service](test/allocator/server/server.go).
 Refer to the [example service](test/allocator/server/server.go).
 
 You must also provide your own `stats.ServiceStatsSubscription` and `stats.ServiceStats` implementations. The latter one must return non-nil `stats.ConsumptionReport` instances if you want MemLimiter to consider allocations made outside of Go runtime allocator and estimate memory utilization correctly.
+
+### Tuning guide
+
+There are several key settings in MemLimiter:
+
+* `Coefficient` ($K_{p}$)
+* `DangerZoneGC` 
+* `DangerZoneThrottling` 
+
+You have to pick it empirically for your service. These plots may give you some inspiration:
+
