@@ -18,35 +18,27 @@ def single_report(report: Report):
     df = report.df
 
     fig, ax = plt.subplots()
-    fig.subplots_adjust(right=0.75)
+    ax.set_xlim(0, 30)
 
-    twin1 = ax.twinx()
-    twin2 = ax.twinx()
-
-    twin2.spines.right.set_position(("axes", 1.2))
+    twin = ax.twinx()
 
     ax.set_xlabel('Time, seconds')
 
-    color = 'tab:green'
-    p1, = ax.plot(df['elapsed_time'], df['rss'], color=color)
-    ax.set_ylabel('RSS, bytes', color=color)
+    color = 'tab:red'
+    l1 = ax.plot(df['elapsed_time'], df['rss'], color=color, label='RSS, bytes')
+    ax.set_ylabel('RSS, bytes')
     ax.set_ylim(0, 1024 * 1024 * 1024)
+    ax.set_yticks([ml * 1024 * 1024 for ml in (256, 512, 512 + 256, 1024)])
     ax.yaxis.set_major_formatter(bytes_major_formatter)
 
-    color = 'tab:red'
-    p2, = twin1.plot(df['elapsed_time'], df['utilization'], color=color)
-    twin1.set_ylabel('Memory budget utilization, %', color=color)
-    twin1.set_ylim(-5, 105)
-    twin1.yaxis.set_tick_params(labelcolor=color)
-    twin1.yaxis.set_major_formatter(mtick.PercentFormatter())
-
     color = 'tab:blue'
-    p3, = twin2.plot(df['elapsed_time'], df['gogc'], color=color)
-    twin2.yaxis.set_tick_params(labelcolor=color)
-    twin2.set_ylabel('GOGC', color=color)
-    twin2.set_ylim(-5, 105)
+    l2 = twin.plot(df['elapsed_time'], df['gogc'], color=color, label='GOGC')
+    twin.set_ylabel('GOGC')
+    twin.set_ylim(-5, 105)
 
-    # ax.legend(handles=[p1, p2, p3])
+    ls = l1 + l2
+    labels = [l.get_label() for l in ls]
+    plt.legend(ls, labels, loc=0)
 
     fig.tight_layout()
     fig.savefig(report.plot_file_path, transparent=False)
