@@ -99,7 +99,7 @@ Settings ranges:
 * $DangerZoneThrottling = 90%$
 * $Period = 100ms$
 * $WindowSize = 20$
-* $K_{p} \in \\{0, 1, 5, 10, 50, 100\\}$
+* $K_{p} \in \\{0, 0.5, 1, 5, 10, 50, 100\\}$
 
 These plots may give you some inspiration on how $K_{p}$ value affects the physical memory consumption other things being equal:
 
