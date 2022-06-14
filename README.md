@@ -103,14 +103,9 @@ Settings ranges:
 
 These plots may give you some inspiration on how $K_{p}$ value affects the physical memory consumption other things being equal:
 
-![Disabled](docs/k_p/disabled.png)
-![05](docs/k_p/05.png)
-![1](docs/k_p/1.png)
-![5](docs/k_p/5.png)
-![10](docs/k_p/10.png)
-![50](docs/k_p/50.png)
+![Control params](docs/control_params.png)
 
-And the summary plot with RSS consumption depending on $K_{p}$ value:
+And the summary plot with RSS consumption dependence on $K_{p}$ value:
 
 ![RSS](docs/rss.png)
 

@@ -31,10 +31,6 @@ class Report:
         df['utilization'] *= 100
         return df
 
-    @property
-    def plot_file_path(self) -> os.PathLike:
-        return Path(self.session.dir_path, "report.png")
-
     def __post_init__(self):
         # Emulate OOM event for unconstrained process
         if self.session.params.unlimited:

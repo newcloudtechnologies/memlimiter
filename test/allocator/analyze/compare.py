@@ -176,10 +176,8 @@ def main():
         for ss in sessions
     ]
 
-    for report in reports:
-        render.single_report(report)
-
-    render.multiple_reports(reports, Path(root_dir, 'reports.png'))
+    render.control_params_subplots(reports, Path(root_dir, "control_params.png"))
+    render.rss_pivot(reports, Path(root_dir, 'rss.png'))
 
 
 if __name__ == '__main__':
