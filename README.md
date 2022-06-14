@@ -94,12 +94,12 @@ You have to pick them empirically for your service. The settings must correspond
 We made a series of performance tests with [Allocator][test/allocator] - an example service which does nothing but allocations that reside in memory for some time. We used different settings, applied the same load and tracked the RSS of a process.
 
 Settings ranges:
-* $RSS_{limit} == {1G}$
-* $DangerZoneGC == 50%$
-* $DangerZoneThrottling == 90%$
-* $Period == 100ms$
-* $WindowSize == 20$
-* $K_{p} \in \{0, 1, 5, 10, 50, 100\}$
+* $RSS_{limit} = {1G}$
+* $DangerZoneGC = 50%$
+* $DangerZoneThrottling = 90%$
+* $Period = 100ms$
+* $WindowSize = 20$
+* $K_{p} \in \\{0, 1, 5, 10, 50, 100\\}$
 
 These plots may give you some inspiration on how $K_{p}$ value affects the physical memory consumption other things being equal:
 
