@@ -2,6 +2,7 @@
 #  Author: Vitaly Isaev <vitaly.isaev@myoffice.team>
 #  License: https://github.com/newcloudtechnologies/memlimiter/blob/master/LICENSE
 import os
+from pathlib import Path
 from typing import List
 
 import humanize as humanize
@@ -19,6 +20,9 @@ def bytes_major_formatter(x, pos):
 
 def single_report(report: Report):
     df = report.df
+
+    # FIXME: drop after use
+    df.to_csv(Path(report.session.dir_path, "report.csv"))
 
     fig, ax = plt.subplots(figsize=(8, 6))
     ax.set_xlim(0, 60)

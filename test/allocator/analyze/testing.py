@@ -4,18 +4,24 @@
 import dataclasses
 import os
 from pathlib import Path
-from typing import Iterable
+from typing import Iterable, Final
+
+GIGABYTE: Final = 1024 * 1024 * 1024
 
 
 @dataclasses.dataclass
 class Params:
     unlimited: bool
-    rss_limit: str = '1G'
+    rss_limit: int = GIGABYTE
     coefficient: int = 20
     load_duration: str = '60s'
 
     def __str__(self) -> str:
         return f"unlimited_{self.unlimited}_rss_limit_{self.rss_limit}_coefficient_{self.coefficient}"
+
+    @property
+    def rss_limit_str(self):
+        return f'{self.rss_limit}b'
 
 
 class Session:
@@ -30,17 +36,18 @@ class Session:
 
 def make_sessions(root_dir: os.PathLike) -> Iterable[Session]:
     cases = (
-        Params(unlimited=True, load_duration="60s", rss_limit='1G'),
-        Params(unlimited=False, load_duration="60s", rss_limit='1G', coefficient=1),
-        Params(unlimited=False, load_duration="60s", rss_limit='1G', coefficient=5),
-        Params(unlimited=False, load_duration="60s", rss_limit='1G', coefficient=10),
-        Params(unlimited=False, load_duration="60s", rss_limit='1G', coefficient=50),
-        Params(unlimited=False, load_duration="60s", rss_limit='1G', coefficient=100),
+        Params(unlimited=True, load_duration="60s", rss_limit=GIGABYTE),
+        Params(unlimited=False, load_duration="60s", rss_limit=GIGABYTE, coefficient=1),
+        Params(unlimited=False, load_duration="60s", rss_limit=GIGABYTE, coefficient=5),
+        Params(unlimited=False, load_duration="60s", rss_limit=GIGABYTE, coefficient=10),
+        Params(unlimited=False, load_duration="60s", rss_limit=GIGABYTE, coefficient=50),
+        Params(unlimited=False, load_duration="60s", rss_limit=GIGABYTE, coefficient=100),
     )
 
-    # TODO: remove after debug
+    # FIXME: remove after debug
     # cases = (
-    #     Params(unlimited=False, rss_limit='1G', coefficient=1, load_duration='60s'),
+    #     Params(unlimited=True, load_duration="20s", rss_limit=GIGABYTE),
+    #     Params(unlimited=False, load_duration="20s", rss_limit=GIGABYTE, coefficient=10),
     # )
 
     return (Session(case=tc, root_dir=root_dir) for tc in cases)

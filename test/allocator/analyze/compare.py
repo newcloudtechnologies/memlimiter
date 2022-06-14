@@ -64,7 +64,7 @@ class ServerConfigRenderer:
   "listen_endpoint": "0.0.0.0:1988",
   "tracker": {
     "path": "/etc/allocator/tracker.csv",
-    "period": "100ms"
+    "period": "10ms"
   }
 }
     '''
@@ -79,7 +79,7 @@ class ServerConfigRenderer:
                ):
         out = self.__template.render(
             unlimited=params.unlimited,
-            rss_limit=params.rss_limit,
+            rss_limit=params.rss_limit_str,
             coefficient=params.coefficient,
         )
 
@@ -149,7 +149,7 @@ def run_session(
 
     # run test session within Docker container
     docker_client.execute(
-        mem_limit=session.params.rss_limit,
+        mem_limit=session.params.rss_limit_str,
         session_dir_path=session.dir_path,
     )
 
