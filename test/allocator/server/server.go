@@ -66,7 +66,6 @@ func (srv *serverImpl) MakeAllocation(_ context.Context, request *schema.MakeAll
 		time.Sleep(duration)
 	}
 
-	// какая-то имитация работы, чтоб компилятор не оптимизировал массив
 	// Imitate some work with slice to prevent compiler from optimizing out the slice.
 	x := uint64(0)
 	for i := 0; i < len(slice); i++ {
