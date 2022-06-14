@@ -64,7 +64,7 @@ The MemLimiter comprises two main parts:
 1. **Core** implementing the memory budget controller and backpressure subsystems. Core relies on actual statistics provided by `stats.ServiceStatsSubscription`. In a critical situation, core may gracefully terminate the application with `utils.ApplicationTerminator`.
 2. **Middleware** providing request throttling feature for various web frameworks. Every time the server receives a request, it uses middleware to ask the MemLimiter’s core for permission to process this request. Currently, only `GRPC` is supported, but `Middleware` is an easily extensible interface, and PRs are welcome.
 
-![Alt text](docs/architecture.png)
+![Architecture](docs/architecture.png)
 
 ## Quick start guide
 
@@ -78,13 +78,39 @@ Refer to the [example service](test/allocator/server/server.go).
 
 You must also provide your own `stats.ServiceStatsSubscription` and `stats.ServiceStats` implementations. The latter one must return non-nil `stats.ConsumptionReport` instances if you want MemLimiter to consider allocations made outside of Go runtime allocator and estimate memory utilization correctly.
 
-### Tuning guide
+### Tuning
 
-There are several key settings in MemLimiter:
+There are several key settings in MemLimiter [configuration](controller/nextgc/config.go):
 
-* `Coefficient` ($K_{p}$)
+* `RSSLimit`
 * `DangerZoneGC` 
 * `DangerZoneThrottling` 
+* `Coefficient` ($K_{p}$)
 
-You have to pick it empirically for your service. These plots may give you some inspiration:
+You have to pick them empirically for your service. The settings must correspond to the business logic features of a particular service and to the workload expected.
 
+We made a series of performance tests with [Allocator][test/allocator] - an example service which does nothing but allocations that reside in memory for some time. We used different settings, applied the same load and tracked the RSS of a process.
+
+Settings ranges:
+* $RSS_{limit} == {1G}$
+* $DangerZoneGC == 50%$
+* $DangerZoneThrottling == 90%$
+* $K_{p} \in {0, 1, 5, 10, 50, 100}$
+
+These plots may give you some inspiration on how $K_{p}$ value affects the physical memory consumption other things being equal:
+
+![Disabled](docs/k_p/disabled.png)
+![05](docs/k_p/05.png)
+![1](docs/k_p/1.png)
+![5](docs/k_p/5.png)
+![10](docs/k_p/10.png)
+![50](docs/k_p/50.png)
+
+And the summary plot with RSS consumption depending on $K_{p}$ value:
+
+![RSS](docs/rss_pivot.png)
+
+The general conclusion is that:
+* Disabling MemLimiter causes OOM;
+* Too low and too high $K_{p}$ values cause control parameter self-oscillation;
+* The higher the $K_{p}$ is, the lower the $RSS$ consumption.

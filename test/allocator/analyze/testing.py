@@ -13,15 +13,22 @@ GIGABYTE: Final = 1024 * 1024 * 1024
 class Params:
     unlimited: bool
     rss_limit: int = GIGABYTE
-    coefficient: int = 20
+    coefficient: float = 20.0
     load_duration: str = '60s'
 
     def __str__(self) -> str:
-        return f"unlimited_{self.unlimited}_rss_limit_{self.rss_limit}_coefficient_{self.coefficient}"
+        return f"unlimited_{self.unlimited}_rss_limit_{self.rss_limit}_coefficient_{self.coefficient_str}"
 
     @property
     def rss_limit_str(self):
         return f'{self.rss_limit}b'
+
+    @property
+    def coefficient_str(self):
+        if type(self.coefficient) == float and self.coefficient.is_integer():
+            return str(int(self.coefficient))
+        else:
+            return str(self.coefficient)
 
 
 class Session:
@@ -35,19 +42,19 @@ class Session:
 
 
 def make_sessions(root_dir: os.PathLike) -> Iterable[Session]:
+    duration = "60s"
     cases = (
-        Params(unlimited=True, load_duration="60s", rss_limit=GIGABYTE),
-        Params(unlimited=False, load_duration="60s", rss_limit=GIGABYTE, coefficient=1),
-        Params(unlimited=False, load_duration="60s", rss_limit=GIGABYTE, coefficient=5),
-        Params(unlimited=False, load_duration="60s", rss_limit=GIGABYTE, coefficient=10),
-        Params(unlimited=False, load_duration="60s", rss_limit=GIGABYTE, coefficient=50),
-        Params(unlimited=False, load_duration="60s", rss_limit=GIGABYTE, coefficient=100),
+        Params(unlimited=True, load_duration=duration, rss_limit=GIGABYTE),
+        Params(unlimited=False, load_duration=duration, rss_limit=GIGABYTE, coefficient=0.5),
+        Params(unlimited=False, load_duration=duration, rss_limit=GIGABYTE, coefficient=1),
+        Params(unlimited=False, load_duration=duration, rss_limit=GIGABYTE, coefficient=5),
+        Params(unlimited=False, load_duration=duration, rss_limit=GIGABYTE, coefficient=10),
+        Params(unlimited=False, load_duration=duration, rss_limit=GIGABYTE, coefficient=50),
     )
 
     # FIXME: remove after debug
     # cases = (
-    #     Params(unlimited=True, load_duration="20s", rss_limit=GIGABYTE),
-    #     Params(unlimited=False, load_duration="20s", rss_limit=GIGABYTE, coefficient=10),
+    #     Params(unlimited=True, load_duration="10s", rss_limit=GIGABYTE),
     # )
 
     return (Session(case=tc, root_dir=root_dir) for tc in cases)
