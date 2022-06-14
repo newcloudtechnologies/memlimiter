@@ -21,7 +21,7 @@ def bytes_major_formatter(x, pos):
 def single_report(report: Report):
     df = report.df
 
-    fig, ax = plt.subplots(figsize=(8, 6))
+    fig, ax = plt.subplots(figsize=(6, 4.5))
     ax.set_xlim(0, 60)
 
     ax.set_xlabel('Time, seconds')

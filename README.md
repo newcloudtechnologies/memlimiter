@@ -85,6 +85,8 @@ There are several key settings in MemLimiter [configuration](controller/nextgc/c
 * `RSSLimit`
 * `DangerZoneGC` 
 * `DangerZoneThrottling` 
+* `Period`
+* `WindowSize`
 * `Coefficient` ($K_{p}$)
 
 You have to pick them empirically for your service. The settings must correspond to the business logic features of a particular service and to the workload expected.
@@ -95,7 +97,9 @@ Settings ranges:
 * $RSS_{limit} == {1G}$
 * $DangerZoneGC == 50%$
 * $DangerZoneThrottling == 90%$
-* $K_{p} \in {0, 1, 5, 10, 50, 100}$
+* $Period == 100ms$
+* $WindowSize == 20$
+* $K_{p} \in \{0, 1, 5, 10, 50, 100\}$
 
 These plots may give you some inspiration on how $K_{p}$ value affects the physical memory consumption other things being equal:
 
@@ -108,7 +112,7 @@ These plots may give you some inspiration on how $K_{p}$ value affects the physi
 
 And the summary plot with RSS consumption depending on $K_{p}$ value:
 
-![RSS](docs/rss_pivot.png)
+![RSS](docs/rss.png)
 
 The general conclusion is that:
 * Disabling MemLimiter causes OOM;
