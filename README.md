@@ -107,9 +107,9 @@ These plots may give you some inspiration on how $K_{p}$ value affects the physi
 
 And the summary plot with RSS consumption dependence on $K_{p}$ value:
 
-![RSS](docs/rss.png)
+![RSS](docs/rss_hl.png)
 
 The general conclusion is that:
-* Disabling MemLimiter causes OOM;
-* Too low and too high $K_{p}$ values cause control parameter self-oscillation;
 * The higher the $K_{p}$ is, the lower the $RSS$ consumption.
+* Too low and too high $K_{p}$ values cause self-oscillation of control parameters;
+* Disabling MemLimiter causes OOM;
