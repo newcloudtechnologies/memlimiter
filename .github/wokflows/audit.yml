@@ -1,0 +1,29 @@
+File: .github/workflows/audit.yml
+name: Audit
+
+on:
+  push:
+    branches: [main, master, develop]
+  pull_request:
+    branches: [main, master, develop]
+
+jobs:
+
+  audit:
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Set up Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.17
+
+      - name: Verify dependencies
+        run: go mod verify
+
+      - name: Build
+        run: make build
+
+      - name: Test
+        run: make test
