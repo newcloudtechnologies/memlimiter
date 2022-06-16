@@ -45,8 +45,3 @@ func (s serviceStatsDefault) PredefinedConsumers() (*ConsumptionReport, error) {
 	// don't forget to put real tracker of your service in your own implementation
 	return nil, nil
 }
-
-type Subscription interface {
-	Updates() <-chan *Service
-	Quit()
-}

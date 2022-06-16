@@ -48,11 +48,13 @@ func TestController(t *testing.T) {
 	// is very close to the limits.
 	memoryBudgetExhausted := &stats.ServiceStatsMock{}
 	memoryBudgetExhausted.On("NextGC").Return(uint64(950 * bytefmt.MEGABYTE))
+	memoryBudgetExhausted.On("RSS").Return(uint64(900 * bytefmt.MEGABYTE))
 	memoryBudgetExhausted.On("PredefinedConsumers").Return((*stats.ConsumptionReport)(nil), nil)
 
 	// In the second case the memory budget utilization returns to the ordinary values.
 	memoryBudgetNormal := &stats.ServiceStatsMock{}
 	memoryBudgetNormal.On("NextGC").Return(uint64(300 * bytefmt.MEGABYTE))
+	memoryBudgetNormal.On("RSS").Return(uint64(500 * bytefmt.MEGABYTE))
 	memoryBudgetNormal.On("PredefinedConsumers").Return((*stats.ConsumptionReport)(nil), nil)
 
 	subscriptionMock := &stats.SubscriptionMock{
@@ -82,6 +84,15 @@ func TestController(t *testing.T) {
 	}()
 
 	backpressureOperatorMock := &backpressure.OperatorMock{}
+
+	// first initialization within NewController constructor
+	backpressureOperatorMock.On(
+		"SetControlParameters",
+		&stats.ControlParameters{
+			GOGC:                 backpressure.DefaultGOGC,
+			ThrottlingPercentage: backpressure.NoThrottling,
+		},
+	).Return(nil).Once()
 
 	// Here we model the situation of memory exhaustion.
 	serviceStatsContainer.Store(memoryBudgetExhausted)
