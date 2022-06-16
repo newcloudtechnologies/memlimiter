@@ -72,7 +72,7 @@ def control_params_subplots(reports: List[Report], path: os.PathLike):
                 title = "MemLimiter disabled"
             else:
                 coefficient = report.session.params.coefficient_str
-                title = f'MemLimiter enabled, $K_{{p}} = {coefficient}$'
+                title = f'MemLimiter enabled, $C_{{p}} = {coefficient}$'
             ax.title.set_text(title)
 
     fig.legend(ls, labels)
@@ -97,11 +97,11 @@ def rss_pivot(reports: List[Report], path: os.PathLike):
         if report.session.params.unlimited:
             label = 'No limits'
         else:
-            label = f'$K_{{p}} = {report.session.params.coefficient_str}$'
+            label = f'$C_{{p}} = {report.session.params.coefficient_str}$'
 
         ax.plot(report.df['elapsed_time'], report.df['rss'], color=colors[i], label=label)
 
     ax.legend()
-    ax.title.set_text('RSS consumption dependence on $K_{{p}}$')
+    ax.title.set_text('RSS consumption dependence on $C_{{p}}$')
     fig.tight_layout()
     fig.savefig(path, transparent=False)

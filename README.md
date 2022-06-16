@@ -30,11 +30,11 @@ $$Utilization = \frac {NextGC} {RSS_{limit}}$$
 
 The controller converts the input signal into the control signal according to the following formula:
 
-$$  K_{p} = C \cdot \frac {1} {1 - Utilization} $$
+$$  K_{p} = C_{p} \cdot \frac {1} {1 - Utilization} $$
 
 This is not an ordinary definition for a proportional component of the PID-controller, but still the direct proportionality is preserved: the closer the $Utilization$ is to 1 (or 100%), the higher the control signal value. The main purpose of the controller is to prevent a situation in which the next GC launch will be scheduled when the memory consumption exceeds the hard limit (and this will cause OOM).
 
-You can adjust the proportional component control signal strength using a coefficient $C$. In addition, there is optional [exponential averaging](https://en.wikipedia.org/wiki/Moving_average#Exponential_moving_average) of the control signal. This helps to smooth out high-frequency fluctuations of the control signal (but it hardly eliminates [self-oscillations](https://en.wikipedia.org/wiki/Self-oscillation)).
+You can adjust the proportional component control signal strength using a coefficient $C_{p}$. In addition, there is optional [exponential averaging](https://en.wikipedia.org/wiki/Moving_average#Exponential_moving_average) of the control signal. This helps to smooth out high-frequency fluctuations of the control signal (but it hardly eliminates [self-oscillations](https://en.wikipedia.org/wiki/Self-oscillation)).
 
 The control signal is always saturated to prevent extremal values:
 
@@ -87,7 +87,7 @@ There are several key settings in MemLimiter [configuration](controller/nextgc/c
 * `DangerZoneThrottling` 
 * `Period`
 * `WindowSize`
-* `Coefficient` ($K_{p}$)
+* `Coefficient` ($C_{p}$)
 
 You have to pick them empirically for your service. The settings must correspond to the business logic features of a particular service and to the workload expected.
 
@@ -99,17 +99,17 @@ Settings ranges:
 * $DangerZoneThrottling = 90%$
 * $Period = 100ms$
 * $WindowSize = 20$
-* $K_{p} \in \\{0, 0.5, 1, 5, 10, 50, 100\\}$
+* $C_{p} \in \\{0, 0.5, 1, 5, 10, 50, 100\\}$
 
-These plots may give you some inspiration on how $K_{p}$ value affects the physical memory consumption other things being equal:
+These plots may give you some inspiration on how $C_{p}$ value affects the physical memory consumption other things being equal:
 
 ![Control params](docs/control_params.png)
 
-And the summary plot with RSS consumption dependence on $K_{p}$ value:
+And the summary plot with RSS consumption dependence on $C_{p}$ value:
 
 ![RSS](docs/rss_hl.png)
 
 The general conclusion is that:
-* The higher the $K_{p}$ is, the lower the $RSS$ consumption.
-* Too low and too high $K_{p}$ values cause self-oscillation of control parameters;
-* Disabling MemLimiter causes OOM;
+* The higher the $C_{p}$ is, the lower the $RSS$ consumption.
+* Too low and too high $C_{p}$ values cause self-oscillation of control parameters.
+* Disabling MemLimiter causes OOM.

@@ -44,18 +44,18 @@ func (b *operatorImpl) GetStats() (*stats.BackpressureStats, error) {
 func (b *operatorImpl) SetControlParameters(value *stats.ControlParameters) error {
 	old := b.lastControlParameters.Swap(value)
 	if old != nil {
-		// если управляющие параметры не изменились, ничего не делаем
+		// if control parameters didn't change, we do nothing
 		if value.EqualsTo(old.(*stats.ControlParameters)) {
 			return nil
 		}
 	}
 
-	// регулируем количество поступающих запросов
+	// set the share of the requests that have to be throttled
 	if err := b.throttler.setThreshold(value.ThrottlingPercentage); err != nil {
 		return errors.Wrap(err, "throttler set threshold")
 	}
 
-	// и интенсивность сбора мусора
+	// tune GC pace
 	debug.SetGCPercent(value.GOGC)
 
 	b.logger.Info("control parameters changed", value.ToKeysAndValues()...)
@@ -63,7 +63,7 @@ func (b *operatorImpl) SetControlParameters(value *stats.ControlParameters) erro
 	return nil
 }
 
-// NewOperator - конструктор нового оператора.
+// NewOperator builds new Operator.
 func NewOperator(logger logr.Logger) Operator {
 	return &operatorImpl{
 		logger:    logger,

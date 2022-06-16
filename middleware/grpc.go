@@ -17,7 +17,7 @@ import (
 )
 
 // GRPC provides server-side interceptors that must be used
-// at the time of grpcImpl server construction.
+// at the time of GRPC server construction.
 type GRPC interface {
 	// MakeUnaryServerInterceptor returns unary server interceptor.
 	MakeUnaryServerInterceptor() grpc.UnaryServerInterceptor
