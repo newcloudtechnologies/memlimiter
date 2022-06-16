@@ -3,7 +3,7 @@
 Library that helps to limit memory consumption of your Go service.
 
 ## Working principles
-As of Go 1.18, all applications written in Go are leaking memory and will be eventually stopped by OOM killer. The memory leak is because Go runtime knows nothing about the limitations imposed on the process by the operating system (for instance, using cgroups). However, an emergency termination of a process is highly undesirable, as it can lead to data integrity violation, distributed transaction crashes, cache resetting, and even cascading service failure. Therefore, services should degrade gracefully instead of immediate stop due to SIGKILL.
+As of today (Go 1.18), there is a possibility for any Go application to be eventually stopped by OOM killer. The memory leak is because Go runtime knows nothing about the limitations imposed on the process by the operating system (for instance, using `cgroups`). However, an unexpected termination of a process because of OOM is highly undesirable, as it can lead to cache resetting, data integrity violation, distributed transaction hanging and even cascading failure of a distributed backend. Therefore, services should degrade gracefully instead of immediate stop due to `SIGKILL`.
 
 A universal solution for programming languages with automatic memory management comprises two parts:
 
