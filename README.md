@@ -2,6 +2,9 @@
 
 Library that helps to limit memory consumption of your Go service.
 
+Notice: All APIs in this package are experimental and may be removed in a
+later release.
+
 ## Working principles
 As of today (Go 1.18), there is a possibility for any Go application to be eventually stopped by OOM killer. The memory leak is because Go runtime knows nothing about the limitations imposed on the process by the operating system (for instance, using `cgroups`). However, an unexpected termination of a process because of OOM is highly undesirable, as it can lead to cache resetting, data integrity violation, distributed transaction hanging and even cascading failure of a distributed backend. Therefore, services should degrade gracefully instead of immediate stop due to `SIGKILL`.
 
@@ -113,3 +116,11 @@ The general conclusion is that:
 * The higher the $C_{p}$ is, the lower the $RSS$ consumption.
 * Too low and too high $C_{p}$ values cause self-oscillation of control parameters.
 * Disabling MemLimiter causes OOM.
+
+## TODO
+
+* Extend middleware.Middleware to support more frameworks.
+* Add GOGC limitations to prevent death spirals.
+* Add generic backpressure interface to let application make their own decisions in case if memory's exhausted.
+
+Your PRs are welcome!
