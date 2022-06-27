@@ -29,11 +29,11 @@ type ServiceStatsSubscription interface {
 }
 
 type subscriptionDefault struct {
-	logger  logr.Logger
-	pid     int32
 	outChan chan ServiceStats
 	breaker *breaker.Breaker
+	logger  logr.Logger
 	period  time.Duration
+	pid     int32
 }
 
 func (s *subscriptionDefault) Updates() <-chan ServiceStats { return s.outChan }
@@ -84,6 +84,7 @@ func NewSubscriptionDefault(logger logr.Logger, period time.Duration) ServiceSta
 				out, err := ss.makeServiceStats()
 				if err != nil {
 					logger.Error(err, "make service stats")
+
 					break
 				}
 

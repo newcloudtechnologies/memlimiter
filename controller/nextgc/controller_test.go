@@ -49,13 +49,13 @@ func TestController(t *testing.T) {
 	memoryBudgetExhausted := &stats.ServiceStatsMock{}
 	memoryBudgetExhausted.On("NextGC").Return(uint64(950 * bytefmt.MEGABYTE))
 	memoryBudgetExhausted.On("RSS").Return(uint64(900 * bytefmt.MEGABYTE))
-	memoryBudgetExhausted.On("PredefinedConsumers").Return((*stats.ConsumptionReport)(nil), nil)
+	memoryBudgetExhausted.On("ConsumptionReport").Return((*stats.ConsumptionReport)(nil))
 
 	// In the second case the memory budget utilization returns to the ordinary values.
 	memoryBudgetNormal := &stats.ServiceStatsMock{}
 	memoryBudgetNormal.On("NextGC").Return(uint64(300 * bytefmt.MEGABYTE))
 	memoryBudgetNormal.On("RSS").Return(uint64(500 * bytefmt.MEGABYTE))
-	memoryBudgetNormal.On("PredefinedConsumers").Return((*stats.ConsumptionReport)(nil), nil)
+	memoryBudgetNormal.On("ConsumptionReport").Return((*stats.ConsumptionReport)(nil))
 
 	subscriptionMock := &stats.SubscriptionMock{
 		Chan: make(chan stats.ServiceStats),

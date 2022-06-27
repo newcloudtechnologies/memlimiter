@@ -4,6 +4,5 @@
  * License: https://github.com/newcloudtechnologies/memlimiter/blob/master/LICENSE
  */
 
-// Package stats contains various data types describing service statistics
-// MemLimiter relies on, as well as its own statistics.
-package stats
+// Package tracker contains logic of service stats persistence. This is for the sake of making graphs for README.
+package tracker

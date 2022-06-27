@@ -12,11 +12,11 @@ type ServiceStats interface {
 	RSS() uint64
 	// NextGC returns current NextGC value [bytes]
 	NextGC() uint64
-	// PredefinedConsumers provides statistical information about the predefined memory consumers that contribute
-	// significant part in process overall memory consumption (caches, memory pools and other large structures).
+	// ConsumptionReport provides statistical information about the predefined memory consumers that contribute
+	// significant part in process' overall memory consumption (caches, memory pools and other large structures).
 	// It's mandatory to fill this report if you have large caches on Go side or if you allocate a lot beyond Cgo borders.
-	// But in case of simple service feel free to return (nil, nil).
-	PredefinedConsumers() (*ConsumptionReport, error)
+	// But if your service is simple, feel free to return nil.
+	ConsumptionReport() *ConsumptionReport
 }
 
 // ConsumptionReport - report on memory consumption contributed by predefined data structures living during the
@@ -41,7 +41,7 @@ func (s serviceStatsDefault) RSS() uint64 { return s.rss }
 
 func (s serviceStatsDefault) NextGC() uint64 { return s.nextGC }
 
-func (s serviceStatsDefault) PredefinedConsumers() (*ConsumptionReport, error) {
-	// don't forget to put real tracker of your service in your own implementation
-	return nil, nil
+func (s serviceStatsDefault) ConsumptionReport() *ConsumptionReport {
+	// don't forget to put real report of your service's memory consumption in your own implementation
+	return nil
 }

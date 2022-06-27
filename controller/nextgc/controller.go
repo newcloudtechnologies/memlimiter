@@ -113,13 +113,8 @@ func (c *controllerImpl) loop() {
 }
 
 func (c *controllerImpl) updateState(serviceStats stats.ServiceStats) error {
-	// Extract latest report on special memory consumers if any.
-	var err error
-
-	c.consumptionReport, err = serviceStats.PredefinedConsumers()
-	if err != nil {
-		return errors.Wrap(err, "predefined consumers")
-	}
+	// Extract the latest report on special memory consumers if there are any.
+	c.consumptionReport = serviceStats.ConsumptionReport()
 
 	c.updateUtilization(serviceStats)
 

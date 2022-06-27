@@ -17,6 +17,7 @@ import (
 	"github.com/pkg/errors"
 )
 
+// Tracker is responsible for service stats persistence.
 type Tracker struct {
 	memLimiter memlimiter.Service
 	writer     *csv.Writer
@@ -73,6 +74,7 @@ func (tr *Tracker) loop() {
 
 	ticker := time.NewTicker(tr.cfg.Period.Duration)
 	defer ticker.Stop()
+
 	for {
 		select {
 		case <-ticker.C:
@@ -85,6 +87,7 @@ func (tr *Tracker) loop() {
 	}
 }
 
+// Quit gracefully terminates tracker.
 func (tr *Tracker) Quit() {
 	tr.breaker.ShutdownAndWait()
 
@@ -93,8 +96,11 @@ func (tr *Tracker) Quit() {
 	}
 }
 
+// NewTrackerFromConfig is a constructor of a Tracker.
 func NewTrackerFromConfig(logger logr.Logger, cfg *Config, memLimiter memlimiter.Service) (*Tracker, error) {
-	fd, err := os.OpenFile(cfg.Path, os.O_CREATE|os.O_APPEND|os.O_WRONLY|os.O_SYNC|os.O_TRUNC, 0644)
+	const perm = 0600
+
+	fd, err := os.OpenFile(cfg.Path, os.O_CREATE|os.O_APPEND|os.O_WRONLY|os.O_SYNC|os.O_TRUNC, perm)
 	if err != nil {
 		return nil, errors.Wrap(err, "open file")
 	}

@@ -16,7 +16,7 @@ import (
 
 var _ Service = (*serviceStub)(nil)
 
-// serviceStub doesn't perform active memory management, it just caches the latest statistics
+// serviceStub doesn't perform active memory management, it just caches the latest statistics.
 type serviceStub struct {
 	latestStats       atomic.Value
 	statsSubscription stats.ServiceStatsSubscription
@@ -37,12 +37,13 @@ func (s *serviceStub) loop() {
 }
 
 func (s *serviceStub) Middleware() middleware.Middleware {
-	// FIXME: return stub
+	// TODO: return stub
 	return nil
 }
 
 func (s *serviceStub) GetStats() (*stats.MemLimiterStats, error) {
 	if val := s.latestStats.Load(); val != nil {
+		//nolint:forcetypeassert
 		ss := val.(stats.ServiceStats)
 
 		out := &stats.MemLimiterStats{
@@ -75,6 +76,8 @@ func newServiceStub(statsSubscription stats.ServiceStatsSubscription) Service {
 		statsSubscription: statsSubscription,
 		breaker:           breaker.NewBreakerWithInitValue(1),
 	}
+
 	go out.loop()
+
 	return out
 }

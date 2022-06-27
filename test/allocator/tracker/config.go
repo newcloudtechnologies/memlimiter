@@ -11,11 +11,13 @@ import (
 	"github.com/pkg/errors"
 )
 
+// Config is a configuration of a tracker.
 type Config struct {
 	Path   string            `json:"path"`
 	Period duration.Duration `json:"period"`
 }
 
+// Prepare validates config.
 func (c *Config) Prepare() error {
 	if c.Path == "" {
 		return errors.New("empty path")

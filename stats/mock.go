@@ -25,10 +25,10 @@ func (m *ServiceStatsMock) NextGC() uint64 {
 	return m.Called().Get(0).(uint64)
 }
 
-func (m *ServiceStatsMock) PredefinedConsumers() (*ConsumptionReport, error) {
+func (m *ServiceStatsMock) ConsumptionReport() *ConsumptionReport {
 	args := m.Called()
 
-	return args.Get(0).(*ConsumptionReport), args.Error(1)
+	return args.Get(0).(*ConsumptionReport)
 }
 
 var _ ServiceStatsSubscription = (*SubscriptionMock)(nil)
