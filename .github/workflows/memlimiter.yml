@@ -1,4 +1,3 @@
-file: .github/workflows/memlimiter.yml
 name: memlimiter
 
 on:
