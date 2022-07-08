@@ -1,3 +1,5 @@
+[![Go Reference](https://pkg.go.dev/badge/github.com/newcloudtechnologies/memlimiter.svg)](https://pkg.go.dev/github.com/newcloudtechnologies/memlimiter)
+
 # MemLimiter
 
 Library that helps to limit memory consumption of your Go service.

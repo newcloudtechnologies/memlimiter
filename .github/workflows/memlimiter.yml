@@ -8,15 +8,10 @@ on:
 
 jobs:
   MemLimiter:
-    runs-on: fedora-latest
+    runs-on: ubuntu-latest
     steps:
-      - name: Hello World!
-        run: echo "HW!"
-
-      - name: Set up Go
-        uses: actions/setup-go@v2
-        with:
-          go-version: 1.18
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v3
 
       - name: Verify dependencies
         run: go mod verify
@@ -28,4 +23,7 @@ jobs:
         run: make test
 
       - name: Lint
-        run: make lint
+        uses: golangci/golangci-lint-action@v3
+        with:
+          version: v1.42.1
+          args: -c .golangci.yml
