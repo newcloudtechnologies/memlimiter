@@ -1,6 +1,6 @@
 build:
 	go build ./...
-	pushd ./test/allocator && go build . && popd
+	cd ./test/allocator && go build . && cd -
 
 test:
 	go test -v -count=1 ./...
