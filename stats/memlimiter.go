@@ -77,6 +77,9 @@ type ThrottlingStats struct {
 
 // ControlParameters - вектор управляющих сигналов для системы.
 type ControlParameters struct {
+	// ControllerStats - internal telemetry that may be useful for
+	// implementation of application-specific backpressure actors.
+	ControllerStats *ControllerStats
 	// GOGC - value that will be used as a parameter for debug.SetGCPercent
 	GOGC int
 	// ThrottlingPercentage - percentage of requests that must be throttled on the middleware level (in range [0; 100])

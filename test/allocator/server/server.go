@@ -14,10 +14,8 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/newcloudtechnologies/memlimiter"
-	"github.com/newcloudtechnologies/memlimiter/stats"
 	"github.com/newcloudtechnologies/memlimiter/test/allocator/schema"
 	"github.com/newcloudtechnologies/memlimiter/test/allocator/tracker"
-	"github.com/newcloudtechnologies/memlimiter/utils"
 	"github.com/newcloudtechnologies/memlimiter/utils/config/prepare"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc"
@@ -110,8 +108,6 @@ func NewAllocatorServer(logger logr.Logger, cfg *Config, options ...grpc.ServerO
 	memLimiter, err := memlimiter.NewServiceFromConfig(
 		logger,
 		cfg.MemLimiter,
-		utils.NewUngracefulApplicationTerminator(logger),
-		stats.NewSubscriptionDefault(logger, time.Second),
 	)
 
 	if err != nil {

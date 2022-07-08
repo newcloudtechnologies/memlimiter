@@ -13,7 +13,6 @@ import (
 	"github.com/newcloudtechnologies/memlimiter/controller/nextgc"
 	"github.com/newcloudtechnologies/memlimiter/middleware"
 	"github.com/newcloudtechnologies/memlimiter/stats"
-	"github.com/newcloudtechnologies/memlimiter/utils"
 	"github.com/newcloudtechnologies/memlimiter/utils/config/prepare"
 	"github.com/pkg/errors"
 )
@@ -56,29 +55,22 @@ func (s *serviceImpl) Quit() {
 func newServiceImpl(
 	logger logr.Logger,
 	cfg *Config,
-	applicationTerminator utils.ApplicationTerminator,
 	statsSubscription stats.ServiceStatsSubscription,
+	backpressureOperator backpressure.Operator,
 ) (Service, error) {
 	if err := prepare.Prepare(cfg); err != nil {
 		return nil, errors.Wrap(err, "prepare config")
-	}
-
-	if applicationTerminator == nil {
-		return nil, errors.New("nil application terminator passed")
 	}
 
 	if statsSubscription == nil {
 		return nil, errors.New("nil tracker subscription passed")
 	}
 
-	backpressureOperator := backpressure.NewOperator(logger)
-
 	c, err := nextgc.NewControllerFromConfig(
 		logger,
 		cfg.ControllerNextGC,
 		statsSubscription,
 		backpressureOperator,
-		applicationTerminator,
 	)
 
 	if err != nil {

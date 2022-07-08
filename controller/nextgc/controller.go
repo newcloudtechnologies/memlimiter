@@ -27,9 +27,8 @@ import (
 //
 //nolint:govet
 type controllerImpl struct {
-	input                 stats.ServiceStatsSubscription         // input: service tracker subscription.
-	backpressureOperator  backpressure.Operator                  // output: write control parameters here
-	applicationTerminator memlimiter_utils.ApplicationTerminator // output: used in case of emergency stop
+	input  stats.ServiceStatsSubscription // input: service tracker subscription.
+	output backpressure.Operator          // output: write control parameters here
 
 	// Controller components:
 	// 1. proportional component.
@@ -88,21 +87,11 @@ func (c *controllerImpl) loop() {
 			// Update controller state every time we receive the actual tracker about the process.
 			if err := c.updateState(serviceStats); err != nil {
 				c.logger.Error(err, "update state")
-				// Impossibility to compute control parameters is a fatal error,
-				// terminate app using side-effect.
-				c.applicationTerminator.Terminate(err)
-
-				return
 			}
 		case <-ticker.C:
 			// Generate control parameters based on the most recent state and send it to the backpressure operator.
 			if err := c.applyControlValue(); err != nil {
 				c.logger.Error(err, "apply control value")
-				// Impossibility to apply control parameters is a fatal error,
-				// terminate app using side-effect.
-				c.applicationTerminator.Terminate(err)
-
-				return
 			}
 		case req := <-c.getStatsChan:
 			req.respondWith(c.aggregateStats())
@@ -184,6 +173,8 @@ func (c *controllerImpl) updateControlParameters() {
 	c.controlParameters = &stats.ControlParameters{}
 	c.updateControlParameterGOGC()
 	c.updateControlParameterThrottling()
+
+	c.controlParameters.ControllerStats = c.aggregateStats()
 }
 
 const percents = 100
@@ -215,7 +206,7 @@ func (c *controllerImpl) updateControlParameterThrottling() {
 }
 
 func (c *controllerImpl) applyControlValue() error {
-	if err := c.backpressureOperator.SetControlParameters(c.controlParameters); err != nil {
+	if err := c.output.SetControlParameters(c.controlParameters); err != nil {
 		return errors.Wrapf(err, "set control parameters: %v", c.controlParameters)
 	}
 
@@ -254,17 +245,15 @@ func (c *controllerImpl) Quit() {
 func NewControllerFromConfig(
 	logger logr.Logger,
 	cfg *ControllerConfig,
-	input stats.ServiceStatsSubscription,
+	serviceStatsSubscription stats.ServiceStatsSubscription,
 	backpressureOperator backpressure.Operator,
-	applicationTerminator memlimiter_utils.ApplicationTerminator,
 ) (controller.Controller, error) {
 	c := &controllerImpl{
-		input:                 input,
-		backpressureOperator:  backpressureOperator,
-		componentP:            newComponentP(logger, cfg.ComponentProportional),
-		pValue:                0,
-		sumValue:              0,
-		applicationTerminator: applicationTerminator,
+		input:      serviceStatsSubscription,
+		output:     backpressureOperator,
+		componentP: newComponentP(logger, cfg.ComponentProportional),
+		pValue:     0,
+		sumValue:   0,
 		controlParameters: &stats.ControlParameters{
 			GOGC:                 backpressure.DefaultGOGC,
 			ThrottlingPercentage: backpressure.NoThrottling,

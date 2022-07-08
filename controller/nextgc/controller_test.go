@@ -17,7 +17,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/newcloudtechnologies/memlimiter/backpressure"
-	"github.com/newcloudtechnologies/memlimiter/utils"
 	"github.com/newcloudtechnologies/memlimiter/utils/config/bytes"
 	"github.com/newcloudtechnologies/memlimiter/utils/config/duration"
 	"github.com/stretchr/testify/mock"
@@ -99,10 +98,9 @@ func TestController(t *testing.T) {
 
 	backpressureOperatorMock.On(
 		"SetControlParameters",
-		&stats.ControlParameters{
-			GOGC:                 80,
-			ThrottlingPercentage: 20,
-		},
+		mock.MatchedBy(func(val *stats.ControlParameters) bool {
+			return val.GOGC == 80 && val.ThrottlingPercentage == 20
+		}),
 	).Return(nil).Once().Run(
 		func(args mock.Arguments) {
 			// As soon as the control signal is delivered to the backpressure.Operator,
@@ -112,17 +110,16 @@ func TestController(t *testing.T) {
 		},
 	).On(
 		"SetControlParameters",
-		&stats.ControlParameters{
-			GOGC:                 100,
-			ThrottlingPercentage: 0,
-		},
+		mock.MatchedBy(func(val *stats.ControlParameters) bool {
+			return val.GOGC == backpressure.DefaultGOGC && val.ThrottlingPercentage == backpressure.NoThrottling
+		}),
 	).Return(nil).Once().Run(
 		func(args mock.Arguments) {
 			close(terminateChan)
 		},
 	)
 
-	c, err := NewControllerFromConfig(logger, cfg, subscriptionMock, backpressureOperatorMock, &utils.ApplicationTerminatorMock{})
+	c, err := NewControllerFromConfig(logger, cfg, subscriptionMock, backpressureOperatorMock)
 	require.NoError(t, err)
 
 	<-terminateChan
