@@ -1,4 +1,4 @@
-File: .github/workflows/memlimiter.yml
+file: .github/workflows/memlimiter.yml
 name: memlimiter
 
 on:
