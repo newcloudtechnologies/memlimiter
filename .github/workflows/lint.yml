@@ -1,4 +1,4 @@
-name: memlimiter
+name: lint
 
 on:
   push:
