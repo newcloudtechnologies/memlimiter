@@ -1,5 +1,5 @@
 [![Go Reference](https://pkg.go.dev/badge/github.com/newcloudtechnologies/memlimiter.svg)](https://pkg.go.dev/github.com/newcloudtechnologies/memlimiter)
-![Coverage](https://img.shields.io/badge/Coverage-18.0%25-red)
+![Coverage](https://img.shields.io/badge/Coverage-50.0%25-yellow)
 ![CI](https://github.com/newcloudtechnologies/memlimiter/actions/workflows/CI.yml/badge.svg)
 
 
