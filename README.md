@@ -1,6 +1,6 @@
 [![Go Reference](https://pkg.go.dev/badge/github.com/newcloudtechnologies/memlimiter.svg)](https://pkg.go.dev/github.com/newcloudtechnologies/memlimiter)
-![test](https://github.com/newcloudtechnologies/memlimiter/actions/workflows/test/badge.svg)
-![lint](https://github.com/newcloudtechnologies/memlimiter/actions/workflows/test/lint.svg)
+![test](https://github.com/newcloudtechnologies/memlimiter/actions/workflows/test.yml/badge.svg)
+![lint](https://github.com/newcloudtechnologies/memlimiter/actions/workflows/lint.yml/badge.svg)
 
 
 # MemLimiter
