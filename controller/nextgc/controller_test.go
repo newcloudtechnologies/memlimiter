@@ -24,8 +24,6 @@ import (
 )
 
 func TestController(t *testing.T) {
-	t.SkipNow()
-
 	logger := testr.New(t)
 
 	const servusPeriod = 100 * time.Millisecond
