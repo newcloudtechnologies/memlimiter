@@ -1,0 +1,19 @@
+name: memlimiter
+
+on:
+  push:
+    branches: [main, master, develop]
+  pull_request:
+    branches: [main, master, develop]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v3
+      - name: Lint
+        uses: golangci/golangci-lint-action@v3
+        with:
+          version: v1.42.1
+          args: -c .golangci.yml
