@@ -17,6 +17,9 @@ jobs:
 
       - uses: actions/setup-go@v3
 
+      - name: SWAP
+        run: swapon -s
+
       - name: Verify dependencies
         run: go mod verify
 
