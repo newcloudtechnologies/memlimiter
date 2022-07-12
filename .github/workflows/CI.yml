@@ -33,9 +33,9 @@ jobs:
 
       - name: check
         run: |
-          - echo $GOPATH
-          - pwd
-          - ll .
+          echo $GOPATH
+          pwd
+          ll .
 
       - name: Go Coverage Badge  # Pass the `coverage.out` output to this action
         uses: tj-actions/coverage-badge-go@v1.2
