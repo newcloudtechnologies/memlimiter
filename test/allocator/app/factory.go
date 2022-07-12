@@ -53,7 +53,7 @@ func (f *factoryDefault) MakeServer(c *cli.Context) (Runnable, error) {
 		return nil, errors.Wrap(err, "unmarshal")
 	}
 
-	srv, err := server.NewAllocatorServer(f.logger, cfg)
+	srv, err := server.NewServer(f.logger, cfg)
 	if err != nil {
 		return nil, errors.Wrap(err, "new allocator server")
 	}

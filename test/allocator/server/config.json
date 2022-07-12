@@ -13,7 +13,9 @@
   },
   "listen_endpoint": "0.0.0.0:1988",
   "tracker": {
-    "path": "/tmp/tracker.csv",
+    "backend_file": {
+      "path": "/tmp/tracker.csv"
+    },
     "period": "1s"
   }
 }
