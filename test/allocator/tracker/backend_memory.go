@@ -12,6 +12,7 @@ type backendMemory struct {
 
 func (b *backendMemory) saveReport(r *Report) error {
 	b.reports = append(b.reports, r)
+
 	return nil
 }
 

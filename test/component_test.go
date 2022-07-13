@@ -36,8 +36,8 @@ func TestComponent(t *testing.T) {
 	defer allocatorServer.Quit()
 
 	go func() {
-		if err := allocatorServer.Run(); err != nil {
-			logger.Error(err, "server run")
+		if errRun := allocatorServer.Run(); errRun != nil {
+			logger.Error(errRun, "server run")
 		}
 	}()
 
@@ -51,14 +51,14 @@ func TestComponent(t *testing.T) {
 	err = perfClient.Run()
 	require.NoError(t, err)
 
+	defer perfClient.Quit()
+
 	// collect reports
 	reports, err := allocatorServer.Tracker().GetReports()
 	require.NoError(t, err)
 	require.NotEmpty(t, reports)
 
 	analyzeReports(t, reports)
-
-	defer perfClient.Quit()
 }
 
 func makeServer(logger logr.Logger, endpoint string) (server.Server, error) {
@@ -107,6 +107,8 @@ func makePerfClient(logger logr.Logger, endpoint string) (*perf.Client, error) {
 }
 
 func analyzeReports(t *testing.T, reports []*tracker.Report) {
+	t.Helper()
+
 	sample := &stats.Sample{}
 
 	// take only the second half of observations as we expect memory consumption to be stable here due to MemLimiter work

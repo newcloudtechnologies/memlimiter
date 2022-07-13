@@ -18,10 +18,12 @@ type Config struct {
 	Period        duration.Duration    `json:"period"`
 }
 
+// ConfigBackendFile configures file backend of a Tracker.
 type ConfigBackendFile struct {
 	Path string `json:"path"`
 }
 
+// Prepare validates config.
 func (c *ConfigBackendFile) Prepare() error {
 	if c.Path == "" {
 		return errors.New("empty path")
@@ -30,6 +32,7 @@ func (c *ConfigBackendFile) Prepare() error {
 	return nil
 }
 
+// ConfigBackendMemory configures memory backend of a Tracker.
 type ConfigBackendMemory struct {
 }
 

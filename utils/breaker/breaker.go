@@ -86,7 +86,8 @@ func (b *Breaker) Value(key interface{}) interface{} { return nil }
 // Done returns channel which can be used in a manner similar to context.Context.Done().
 func (b *Breaker) Done() <-chan struct{} { return b.exitChan }
 
-var IsNotOperational = errors.New("breaker is not operational")
+// ErrNotOperational tells that Breaker has been shut down.
+var ErrNotOperational = errors.New("breaker is not operational")
 
 // Err returns error which can be used in a manner similar to context.Context.Done().
 func (b *Breaker) Err() error {
@@ -94,7 +95,7 @@ func (b *Breaker) Err() error {
 		return nil
 	}
 
-	return IsNotOperational
+	return ErrNotOperational
 }
 
 // NewBreaker - default breaker constructor.

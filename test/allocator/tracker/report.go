@@ -10,6 +10,7 @@ import (
 	"fmt"
 )
 
+// Report is a memory consumption report (used only for tests).
 type Report struct {
 	Timestamp   string
 	RSS         uint64

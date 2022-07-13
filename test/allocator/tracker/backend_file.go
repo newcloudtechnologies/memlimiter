@@ -17,9 +17,9 @@ import (
 var _ backend = (*backendFile)(nil)
 
 type backendFile struct {
-	logger logr.Logger
-	writer *csv.Writer
 	fd     *os.File
+	writer *csv.Writer
+	logger logr.Logger
 }
 
 func (b *backendFile) saveReport(r *Report) error {

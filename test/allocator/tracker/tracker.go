@@ -78,7 +78,15 @@ func (tr *Tracker) loop() {
 	}
 }
 
-func (tr *Tracker) GetReports() ([]*Report, error) { return tr.backend.getReports() }
+// GetReports returns the accumulated reports.
+func (tr *Tracker) GetReports() ([]*Report, error) {
+	out, err := tr.backend.getReports()
+	if err != nil {
+		return nil, errors.Wrap(err, "backend get reports")
+	}
+
+	return out, nil
+}
 
 // Quit gracefully terminates tracker.
 func (tr *Tracker) Quit() {
@@ -92,6 +100,7 @@ func NewTrackerFromConfig(logger logr.Logger, cfg *Config, memLimiter memlimiter
 		back backend
 		err  error
 	)
+
 	switch {
 	case cfg.BackendFile != nil:
 		back, err = newBackendFile(logger, cfg.BackendFile)
