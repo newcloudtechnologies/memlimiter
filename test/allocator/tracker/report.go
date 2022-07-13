@@ -10,15 +10,16 @@ import (
 	"fmt"
 )
 
-type report struct {
-	timestamp   string
-	rss         uint64
-	utilization float64
-	gogc        int
-	throttling  uint32
+// Report is a memory consumption report (used only for tests).
+type Report struct {
+	Timestamp   string
+	RSS         uint64
+	Utilization float64
+	GOGC        int
+	Throttling  uint32
 }
 
-func (r *report) headers() []string {
+func (r *Report) headers() []string {
 	return []string{
 		"timestamp",
 		"rss",
@@ -28,12 +29,12 @@ func (r *report) headers() []string {
 	}
 }
 
-func (r *report) toCsv() []string {
+func (r *Report) toCsv() []string {
 	return []string{
-		r.timestamp,
-		fmt.Sprint(r.rss),
-		fmt.Sprint(r.utilization),
-		fmt.Sprint(r.gogc),
-		fmt.Sprint(r.throttling),
+		r.Timestamp,
+		fmt.Sprint(r.RSS),
+		fmt.Sprint(r.Utilization),
+		fmt.Sprint(r.GOGC),
+		fmt.Sprint(r.Throttling),
 	}
 }

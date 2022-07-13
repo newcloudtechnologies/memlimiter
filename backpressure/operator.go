@@ -19,6 +19,7 @@ var _ Operator = (*operatorImpl)(nil)
 
 type operatorImpl struct {
 	*throttler
+	notificationChan      chan<- *stats.MemLimiterStats
 	lastControlParameters atomic.Value
 	logger                logr.Logger
 }
@@ -60,13 +61,42 @@ func (b *operatorImpl) SetControlParameters(value *stats.ControlParameters) erro
 
 	b.logger.Info("control parameters changed", value.ToKeysAndValues()...)
 
+	// notify client about statistics change
+	if b.notificationChan != nil {
+		backpressureStats, err := b.GetStats()
+		if err != nil {
+			return errors.Wrap(err, "get stats")
+		}
+
+		memLimiterStats := &stats.MemLimiterStats{
+			Controller:   value.ControllerStats,
+			Backpressure: backpressureStats,
+		}
+
+		// if client's not ready to read, omit it
+		select {
+		case b.notificationChan <- memLimiterStats:
+		default:
+		}
+	}
+
 	return nil
 }
 
 // NewOperator builds new Operator.
-func NewOperator(logger logr.Logger) Operator {
-	return &operatorImpl{
+func NewOperator(logger logr.Logger, options ...Option) Operator {
+	out := &operatorImpl{
 		logger:    logger,
 		throttler: newThrottler(),
 	}
+
+	//nolint:gocritic
+	for _, op := range options {
+		switch t := op.(type) {
+		case *notificationsOption:
+			out.notificationChan = t.val
+		}
+	}
+
+	return out
 }

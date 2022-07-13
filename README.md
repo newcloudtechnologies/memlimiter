@@ -2,7 +2,6 @@
 ![Coverage](https://img.shields.io/badge/Coverage-50.0%25-yellow)
 ![CI](https://github.com/newcloudtechnologies/memlimiter/actions/workflows/CI.yml/badge.svg)
 
-
 # MemLimiter
 
 Library that helps to limit memory consumption of your Go service.

@@ -3,7 +3,6 @@
 #  License: https://github.com/newcloudtechnologies/memlimiter/blob/master/LICENSE
 import dataclasses
 import os
-from pathlib import Path
 
 import pandas as pd
 

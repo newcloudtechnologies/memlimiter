@@ -28,7 +28,7 @@ type Breaker struct {
 
 // Inc increments number of tasks.
 func (b *Breaker) Inc() error {
-	if !b.isOperational() {
+	if !b.IsOperational() {
 		return errors.New("shutdown in progress")
 	}
 
@@ -42,8 +42,8 @@ func (b *Breaker) Dec() {
 	atomic.AddInt64(&b.count, -1)
 }
 
-// isOperational checks whether breaker is in operational mode.
-func (b *Breaker) isOperational() bool { return atomic.LoadInt32(&b.mode) == operational }
+// IsOperational checks whether breaker is in operational mode.
+func (b *Breaker) IsOperational() bool { return atomic.LoadInt32(&b.mode) == operational }
 
 // Wait blocks until the number of tasks becomes equal to zero.
 func (b *Breaker) Wait() {
@@ -86,13 +86,16 @@ func (b *Breaker) Value(key interface{}) interface{} { return nil }
 // Done returns channel which can be used in a manner similar to context.Context.Done().
 func (b *Breaker) Done() <-chan struct{} { return b.exitChan }
 
+// ErrNotOperational tells that Breaker has been shut down.
+var ErrNotOperational = errors.New("breaker is not operational")
+
 // Err returns error which can be used in a manner similar to context.Context.Done().
 func (b *Breaker) Err() error {
-	if b.isOperational() {
+	if b.IsOperational() {
 		return nil
 	}
 
-	return errors.New("breaker is not operational")
+	return ErrNotOperational
 }
 
 // NewBreaker - default breaker constructor.

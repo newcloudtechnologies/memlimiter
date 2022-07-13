@@ -7,21 +7,45 @@
 package memlimiter
 
 import (
+	"time"
+
 	"github.com/go-logr/logr"
+	"github.com/newcloudtechnologies/memlimiter/backpressure"
 	"github.com/newcloudtechnologies/memlimiter/stats"
-	"github.com/newcloudtechnologies/memlimiter/utils"
 )
 
 // NewServiceFromConfig - main entrypoint for MemLimiter.
 func NewServiceFromConfig(
 	logger logr.Logger,
 	cfg *Config,
-	applicationTerminator utils.ApplicationTerminator,
-	statsSubscription stats.ServiceStatsSubscription,
+	options ...Option,
 ) (Service, error) {
-	if cfg == nil {
-		return newServiceStub(statsSubscription), nil
+	var (
+		serviceStatsSubscription stats.ServiceStatsSubscription
+		backpressureOperator     backpressure.Operator
+	)
+
+	for _, op := range options {
+		switch t := (op).(type) {
+		case *serviceStatsSubscriptionOption:
+			serviceStatsSubscription = t.val
+		case *backpressureOperatorOption:
+			backpressureOperator = t.val
+		}
 	}
 
-	return newServiceImpl(logger, cfg, applicationTerminator, statsSubscription)
+	// make defaults
+	if serviceStatsSubscription == nil {
+		serviceStatsSubscription = stats.NewSubscriptionDefault(logger, time.Second)
+	}
+
+	if backpressureOperator == nil {
+		backpressureOperator = backpressure.NewOperator(logger)
+	}
+
+	if cfg == nil {
+		return newServiceStub(serviceStatsSubscription), nil
+	}
+
+	return newServiceImpl(logger, cfg, serviceStatsSubscription, backpressureOperator)
 }

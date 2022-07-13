@@ -13,14 +13,37 @@ import (
 
 // Config is a configuration of a tracker.
 type Config struct {
-	Path   string            `json:"path"`
-	Period duration.Duration `json:"period"`
+	BackendFile   *ConfigBackendFile   `json:"backend_file"`
+	BackendMemory *ConfigBackendMemory `json:"backend_memory"`
+	Period        duration.Duration    `json:"period"`
+}
+
+// ConfigBackendFile configures file backend of a Tracker.
+type ConfigBackendFile struct {
+	Path string `json:"path"`
+}
+
+// Prepare validates config.
+func (c *ConfigBackendFile) Prepare() error {
+	if c.Path == "" {
+		return errors.New("empty path")
+	}
+
+	return nil
+}
+
+// ConfigBackendMemory configures memory backend of a Tracker.
+type ConfigBackendMemory struct {
 }
 
 // Prepare validates config.
 func (c *Config) Prepare() error {
-	if c.Path == "" {
-		return errors.New("empty path")
+	if c.BackendFile == nil && c.BackendMemory == nil {
+		return errors.New("empty backend sections")
+	}
+
+	if c.BackendFile != nil && c.BackendMemory != nil {
+		return errors.New("more than one non-empty backend section")
 	}
 
 	if c.Period.Duration == 0 {

@@ -94,7 +94,7 @@ func (p *Client) makeRequest() {
 	}
 
 	_, err := p.client.MakeAllocation(ctx, request)
-	if err != nil {
+	if err != nil && p.breaker.IsOperational() {
 		p.logger.Error(err, "make allocation request")
 	}
 }

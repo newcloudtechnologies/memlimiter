@@ -14,10 +14,8 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/newcloudtechnologies/memlimiter"
-	"github.com/newcloudtechnologies/memlimiter/stats"
 	"github.com/newcloudtechnologies/memlimiter/test/allocator/schema"
 	"github.com/newcloudtechnologies/memlimiter/test/allocator/tracker"
-	"github.com/newcloudtechnologies/memlimiter/utils"
 	"github.com/newcloudtechnologies/memlimiter/utils/config/prepare"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc"
@@ -32,8 +30,10 @@ type Server interface {
 	Quit()
 	// GRPCServer returns underlying server implementation. Only for testing purposes.
 	GRPCServer() *grpc.Server
-	// MemLimiter returns underlying memlimiter implementation. Only for testing purposes.
+	// MemLimiter returns internal MemLimiter object. Only for testing purposes.
 	MemLimiter() memlimiter.Service
+	// Tracker returns statistics tracker. Only for testing purposes.
+	Tracker() *tracker.Tracker
 }
 
 var _ Server = (*serverImpl)(nil)
@@ -96,24 +96,20 @@ func (srv *serverImpl) GRPCServer() *grpc.Server { return srv.grpcServer }
 
 func (srv *serverImpl) MemLimiter() memlimiter.Service { return srv.memLimiter }
 
+func (srv *serverImpl) Tracker() *tracker.Tracker { return srv.tracker }
+
 func (srv *serverImpl) Quit() {
 	srv.logger.Info("terminating server")
 	srv.grpcServer.Stop()
 }
 
-// NewAllocatorServer - server constructor.
-func NewAllocatorServer(logger logr.Logger, cfg *Config, options ...grpc.ServerOption) (Server, error) {
+// NewServer - server constructor.
+func NewServer(logger logr.Logger, cfg *Config, options ...grpc.ServerOption) (Server, error) {
 	if err := prepare.Prepare(cfg); err != nil {
 		return nil, errors.Wrap(err, "configs prepare")
 	}
 
-	memLimiter, err := memlimiter.NewServiceFromConfig(
-		logger,
-		cfg.MemLimiter,
-		utils.NewUngracefulApplicationTerminator(logger),
-		stats.NewSubscriptionDefault(logger, time.Second),
-	)
-
+	memLimiter, err := memlimiter.NewServiceFromConfig(logger, cfg.MemLimiter)
 	if err != nil {
 		return nil, errors.Wrap(err, "new MemLimiter from config")
 	}
