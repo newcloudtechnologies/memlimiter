@@ -125,7 +125,6 @@ The general conclusion is that:
 
 * Extend middleware.Middleware to support more frameworks.
 * Add GOGC limitations to prevent death spirals.
-* Add generic backpressure interface to let application make their own decisions in case if memory's exhausted.
 * Support popular Cgo allocators like Jemalloc or TCMalloc, parse their stats to provide information about Cgo memory consumption.
 
 Your PRs are welcome!
