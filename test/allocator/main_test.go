@@ -7,57 +7,126 @@
 package main
 
 import (
-	"os"
 	"testing"
 	"time"
 
+	"code.cloudfoundry.org/bytefmt"
+	"github.com/aclements/go-moremath/stats"
 	"github.com/go-logr/logr"
-	"github.com/go-logr/zapr"
-	"github.com/newcloudtechnologies/memlimiter/test/allocator/app"
+	"github.com/go-logr/logr/testr"
+	"github.com/newcloudtechnologies/memlimiter"
+	"github.com/newcloudtechnologies/memlimiter/controller/nextgc"
+	"github.com/newcloudtechnologies/memlimiter/test/allocator/perf"
+	"github.com/newcloudtechnologies/memlimiter/test/allocator/server"
+	"github.com/newcloudtechnologies/memlimiter/test/allocator/tracker"
+	"github.com/newcloudtechnologies/memlimiter/utils/config/bytes"
+	"github.com/newcloudtechnologies/memlimiter/utils/config/duration"
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
-	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
 )
 
-func TestMain(m *testing.M) {
-	exitVal := m.Run()
-	os.Exit(exitVal)
-}
+func TestComponent(t *testing.T) {
+	const endpoint = "0.0.0.0:1988"
 
-func newLogger() logr.Logger {
-	config := zap.NewDevelopmentConfig()
-	config.EncoderConfig.EncodeLevel = zapcore.CapitalColorLevelEncoder
+	logger := testr.New(t)
 
-	zapLog, err := config.Build()
-	if err != nil {
-		panic(err)
-	}
-
-	return zapr.NewLogger(zapLog)
-}
-
-func TestIntegration(t *testing.T) {
-	logger := newLogger()
-
-	factory := app.NewFactory(logger)
-
-	srv, err := factory.MakeServerFromConfig("./test/allocator/server/config.json")
+	allocatorServer, err := makeServer(logger, endpoint)
 	require.NoError(t, err)
 
-	perfClient, err := factory.MakePerfClientFromConfig("./test/allocator/perf/config.json")
-	require.NoError(t, err)
+	defer allocatorServer.Quit()
 
 	go func() {
-		err := srv.Run()
-		require.NoError(t, err)
+		if errRun := allocatorServer.Run(); errRun != nil {
+			logger.Error(errRun, "server run")
+		}
 	}()
 
-	time.Sleep(100 * time.Millisecond) // let server start
+	// wait for a while to make server run asynchronously
+	time.Sleep(time.Second)
 
+	perfClient, err := makePerfClient(logger, endpoint)
+	require.NoError(t, err)
+
+	// perform load
 	err = perfClient.Run()
 	require.NoError(t, err)
 
-	perfClient.Quit()
+	defer perfClient.Quit()
 
-	srv.Quit()
+	// collect reports
+	reports, err := allocatorServer.Tracker().GetReports()
+	require.NoError(t, err)
+	require.NotEmpty(t, reports)
+
+	analyzeReports(t, reports)
+}
+
+func makeServer(logger logr.Logger, endpoint string) (server.Server, error) {
+	cfg := &server.Config{
+		MemLimiter: &memlimiter.Config{ControllerNextGC: &nextgc.ControllerConfig{
+			RSSLimit:             bytes.Bytes{Value: 1 * bytefmt.GIGABYTE},
+			DangerZoneGOGC:       50,
+			DangerZoneThrottling: 90,
+			Period:               duration.Duration{Duration: time.Second},
+			ComponentProportional: &nextgc.ComponentProportionalConfig{
+				Coefficient: 20,
+				WindowSize:  20,
+			},
+		}},
+		Tracker: &tracker.Config{
+			BackendMemory: &tracker.ConfigBackendMemory{},
+			Period:        duration.Duration{Duration: time.Second},
+		},
+		ListenEndpoint: endpoint,
+	}
+
+	allocatorServer, err := server.NewServer(logger, cfg)
+	if err != nil {
+		return nil, errors.Wrap(err, "perf client")
+	}
+
+	return allocatorServer, nil
+}
+
+func makePerfClient(logger logr.Logger, endpoint string) (*perf.Client, error) {
+	cfg := &perf.Config{
+		Endpoint:       endpoint,
+		RPS:            100,
+		LoadDuration:   duration.Duration{Duration: 20 * time.Second},
+		AllocationSize: bytes.Bytes{Value: bytefmt.MEGABYTE},
+		PauseDuration:  duration.Duration{Duration: 5 * time.Second},
+		RequestTimeout: duration.Duration{Duration: 1 * time.Minute},
+	}
+
+	perfClient, err := perf.NewClient(logger, cfg)
+	if err != nil {
+		return nil, errors.Wrap(err, "perf client")
+	}
+
+	return perfClient, nil
+}
+
+func analyzeReports(t *testing.T, reports []*tracker.Report) {
+	t.Helper()
+
+	sample := &stats.Sample{}
+
+	// take only the second half of observations as we expect memory consumption to be stable here due to MemLimiter work
+	reports = reports[len(reports)/2:]
+
+	for _, r := range reports {
+		sample.Xs = append(sample.Xs, float64(r.RSS))
+	}
+
+	actualRSS := sample.Mean()
+
+	const (
+		// With the fixed Perf client and MemLimiter settings provided above in this file,
+		// we expect RSS to stabilize around this point
+		expectedRSS = 800 * bytefmt.MEGABYTE
+		// Details may vary
+		delta = 50 * bytefmt.MEGABYTE
+	)
+
+	require.InDelta(t, expectedRSS, actualRSS, delta)
 }
