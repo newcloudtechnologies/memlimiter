@@ -44,7 +44,6 @@ func (f *factoryDefault) MakeServerFromContext(c *cli.Context) (Runnable, error)
 	return f.MakeServerFromConfig(filename)
 }
 
-//nolint:dupl
 func (f *factoryDefault) MakeServerFromConfig(filename string) (Runnable, error) {
 	data, err := ioutil.ReadFile(filepath.Clean(filename))
 	if err != nil {
@@ -71,7 +70,6 @@ func (f *factoryDefault) MakePerfClientFromContext(c *cli.Context) (Runnable, er
 	return f.MakeServerFromConfig(filename)
 }
 
-//nolint:dupl
 func (f *factoryDefault) MakePerfClientFromConfig(filename string) (Runnable, error) {
 	data, err := ioutil.ReadFile(filepath.Clean(filename))
 	if err != nil {
