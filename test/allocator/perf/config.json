@@ -1,8 +1,8 @@
 {
   "endpoint": "localhost:1988",
   "rps": 100,
-  "load_duration": "30s",
+  "load_duration": "20s",
   "allocation_size": "1M",
-  "pause_duration": "5s",
+  "pause_duration": "10s",
   "request_timeout": "1m"
 }

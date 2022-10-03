@@ -12,7 +12,6 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/newcloudtechnologies/memlimiter/utils/config/prepare"
-	"github.com/rcrowley/go-metrics"
 	"golang.org/x/time/rate"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/durationpb"

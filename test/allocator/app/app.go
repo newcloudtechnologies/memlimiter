@@ -40,12 +40,12 @@ func (a *App) Run() {
 					},
 				},
 				Action: func(context *cli.Context) error {
-					r, err := a.factory.MakeServer(context)
+					r, err := a.factory.MakeServerFromContext(context)
 					if err != nil {
 						return errors.Wrap(err, "make server")
 					}
 
-					return a.runAndWaitSignal(r)
+					return RunAndWaitSignal(r)
 				},
 			},
 			&cli.Command{
@@ -60,12 +60,12 @@ func (a *App) Run() {
 					},
 				},
 				Action: func(context *cli.Context) error {
-					r, err := a.factory.MakePerfClient(context)
+					r, err := a.factory.MakePerfClientFromContext(context)
 					if err != nil {
 						return errors.Wrap(err, "make perf client")
 					}
 
-					return a.runAndWaitSignal(r)
+					return RunAndWaitSignal(r)
 				},
 			},
 		},
@@ -77,7 +77,7 @@ func (a *App) Run() {
 	}
 }
 
-func (a *App) runAndWaitSignal(r Runnable) error {
+func RunAndWaitSignal(r Runnable) error {
 	signalChan := make(chan os.Signal, 1)
 	signal.Notify(signalChan, syscall.SIGINT, syscall.SIGTERM)
 
