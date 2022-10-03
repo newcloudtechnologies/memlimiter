@@ -27,15 +27,7 @@ jobs:
         run: make build
 
       - name: Test
-        run: |
-          go test -v ./... -covermode=count -coverprofile=coverage.out
-          go tool cover -func=coverage.out -o=coverage.out
-
-      - name: check
-        run: |
-          echo $GOPATH
-          pwd
-          ls -l .
+        run: make test_coverage
 
       - name: Go Coverage Badge  # Pass the `coverage.out` output to this action
         uses: tj-actions/coverage-badge-go@v1.2

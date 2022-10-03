@@ -28,20 +28,23 @@ type Runnable interface {
 
 // Factory builds runnable tasks.
 type Factory interface {
-	// MakeServer creates a server.
-	MakeServer(c *cli.Context) (Runnable, error)
-	// MakePerfClient creates a client for performance tests.
-	MakePerfClient(c *cli.Context) (Runnable, error)
+	MakeServerFromConfig(filename string) (Runnable, error)
+	MakeServerFromContext(c *cli.Context) (Runnable, error)
+	MakePerfClientFromConfig(filename string) (Runnable, error)
+	MakePerfClientFromContext(c *cli.Context) (Runnable, error)
 }
 
 type factoryDefault struct {
 	logger logr.Logger
 }
 
-//nolint:dupl
-func (f *factoryDefault) MakeServer(c *cli.Context) (Runnable, error) {
+func (f *factoryDefault) MakeServerFromContext(c *cli.Context) (Runnable, error) {
 	filename := c.String("config")
 
+	return f.MakeServerFromConfig(filename)
+}
+
+func (f *factoryDefault) MakeServerFromConfig(filename string) (Runnable, error) {
 	data, err := ioutil.ReadFile(filepath.Clean(filename))
 	if err != nil {
 		return nil, errors.Wrap(err, "ioutil readfile")
@@ -61,10 +64,13 @@ func (f *factoryDefault) MakeServer(c *cli.Context) (Runnable, error) {
 	return srv, nil
 }
 
-//nolint:dupl
-func (f *factoryDefault) MakePerfClient(c *cli.Context) (Runnable, error) {
+func (f *factoryDefault) MakePerfClientFromContext(c *cli.Context) (Runnable, error) {
 	filename := c.String("config")
 
+	return f.MakeServerFromConfig(filename)
+}
+
+func (f *factoryDefault) MakePerfClientFromConfig(filename string) (Runnable, error) {
 	data, err := ioutil.ReadFile(filepath.Clean(filename))
 	if err != nil {
 		return nil, errors.Wrap(err, "ioutil readfile")

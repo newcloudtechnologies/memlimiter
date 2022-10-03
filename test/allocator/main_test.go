@@ -4,7 +4,7 @@
  * License: https://github.com/newcloudtechnologies/memlimiter/blob/master/LICENSE
  */
 
-package test
+package main
 
 import (
 	"testing"
@@ -92,7 +92,7 @@ func makePerfClient(logger logr.Logger, endpoint string) (*perf.Client, error) {
 	cfg := &perf.Config{
 		Endpoint:       endpoint,
 		RPS:            100,
-		LoadDuration:   duration.Duration{Duration: 30 * time.Second},
+		LoadDuration:   duration.Duration{Duration: 20 * time.Second},
 		AllocationSize: bytes.Bytes{Value: bytefmt.MEGABYTE},
 		PauseDuration:  duration.Duration{Duration: 5 * time.Second},
 		RequestTimeout: duration.Duration{Duration: 1 * time.Minute},

@@ -2,8 +2,18 @@ build:
 	go build ./...
 	cd ./test/allocator && go build . && cd -
 
-test:
-	go test -v -count=1 ./...
+UNIT_TEST_PACKAGES=$(shell go list ./... | grep -v test)
+unit_test:
+	go test -v -count=1 -cover $(UNIT_TEST_PACKAGES) -coverprofile=coverage.unit.out -coverpkg ./...
+
+integration_test:
+	go test -c ./test/allocator/main_test.go -o ./test/allocator/allocator-test -coverpkg ./...
+	./test/allocator/allocator-test -test.v -test.coverprofile=coverage.integration.out
+
+test_coverage: unit_test integration_test
+	cp coverage.unit.out coverage.overall.out
+	tail --lines=+2 coverage.integration.out >> coverage.overall.out
+	go tool cover -func=coverage.overall.out -o=coverage.out
 
 lint:
 	golangci-lint run -c .golangci.yml ./...
