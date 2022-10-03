@@ -10,8 +10,10 @@ integration_test:
 	go test -c ./test/ -o ./test/allocator/allocator-test -coverpkg ./...
 	./test/allocator/allocator-test -test.v -test.coverprofile=coverage.integration.out
 
-coverage:
-	go tool cover -func=coverage.integration.out -o=coverage.out
+test_coverage: unit_test integration_test
+	cp coverage.unit.out coverage.out
+	tail --lines=+2 coverage.integration.out >> coverage.out
+	go tool cover -func=coverage.out -o=coverage.out
 
 lint:
 	golangci-lint run -c .golangci.yml ./...
