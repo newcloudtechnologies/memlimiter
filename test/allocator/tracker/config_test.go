@@ -16,6 +16,7 @@ func TestConfigBackendFile_Prepare(t *testing.T) {
 	type fields struct {
 		Path string
 	}
+
 	tests := []struct {
 		name    string
 		fields  fields
@@ -27,7 +28,9 @@ func TestConfigBackendFile_Prepare(t *testing.T) {
 			wantErr: true,
 		},
 	}
+
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			c := &ConfigBackendFile{
 				Path: tt.fields.Path,
@@ -45,6 +48,7 @@ func TestConfig_Prepare(t *testing.T) {
 		BackendMemory *ConfigBackendMemory
 		Period        duration.Duration
 	}
+
 	tests := []struct {
 		name    string
 		fields  fields
@@ -72,7 +76,9 @@ func TestConfig_Prepare(t *testing.T) {
 			wantErr: true,
 		},
 	}
+
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			c := &Config{
 				BackendFile:   tt.fields.BackendFile,

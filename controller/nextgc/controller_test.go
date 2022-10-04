@@ -48,6 +48,7 @@ func TestController(t *testing.T) {
 	memoryBudgetExhausted := &stats.ServiceStatsMock{}
 	memoryBudgetExhausted.On("NextGC").Return(uint64(950 * bytefmt.MEGABYTE))
 	memoryBudgetExhausted.On("RSS").Return(uint64(900 * bytefmt.MEGABYTE))
+
 	cr1 := &stats.ConsumptionReport{
 		Cgo: map[string]uint64{"some_important_cache": 5 * bytefmt.MEGABYTE},
 	}
@@ -57,6 +58,7 @@ func TestController(t *testing.T) {
 	memoryBudgetNormal := &stats.ServiceStatsMock{}
 	memoryBudgetNormal.On("NextGC").Return(uint64(300 * bytefmt.MEGABYTE))
 	memoryBudgetNormal.On("RSS").Return(uint64(500 * bytefmt.MEGABYTE))
+
 	cr2 := &stats.ConsumptionReport{
 		Cgo: map[string]uint64{"some_important_cache": 1 * bytefmt.MEGABYTE},
 	}
