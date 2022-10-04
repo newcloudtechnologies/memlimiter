@@ -18,7 +18,10 @@ jobs:
       - uses: actions/setup-go@v3
 
       - name: SWAP
-        run: sudo swapoff $(swapon -s | tail -n 1 | gawk '{print $1;}')
+        run: |
+          sudo swapon -s
+          sudo swapoff $(sudo swapon -s | tail -n 1 | gawk '{print $1;}')
+          sudo swapon -s
 
       - name: Verify dependencies
         run: go mod verify
