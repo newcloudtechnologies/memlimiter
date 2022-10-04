@@ -7,7 +7,6 @@ require (
 	github.com/aclements/go-moremath v0.0.0-20210112150236-f10218a38794
 	github.com/go-logr/logr v1.2.3
 	github.com/go-logr/stdr v1.2.2
-	github.com/go-logr/zapr v1.2.3
 	github.com/golang/protobuf v1.5.2
 	github.com/pkg/errors v0.9.1
 	github.com/rcrowley/go-metrics v0.0.0-20201227073835-cf1acfcdf475
