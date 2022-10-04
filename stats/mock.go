@@ -31,16 +31,15 @@ func (m *ServiceStatsMock) ConsumptionReport() *ConsumptionReport {
 	return args.Get(0).(*ConsumptionReport)
 }
 
-var _ ServiceStatsSubscription = (*SubscriptionMock)(nil)
+var _ ServiceStatsSubscription = (*ServiceStatsSubscriptionMock)(nil)
 
-// SubscriptionMock mocks ServiceStatsSubscription.
-type SubscriptionMock struct {
+// ServiceStatsSubscriptionMock mocks ServiceStatsSubscription.
+type ServiceStatsSubscriptionMock struct {
+	ServiceStatsSubscription
 	Chan chan ServiceStats
 	mock.Mock
 }
 
-func (m *SubscriptionMock) Updates() <-chan ServiceStats {
+func (m *ServiceStatsSubscriptionMock) Updates() <-chan ServiceStats {
 	return m.Chan
 }
-
-func (m *SubscriptionMock) Quit() { m.Called() }

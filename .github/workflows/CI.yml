@@ -18,7 +18,11 @@ jobs:
       - uses: actions/setup-go@v3
 
       - name: SWAP
-        run: swapon -s
+        run: |
+          sudo swapon -s
+          export PARTITION=$(sudo swapon -s | tail -n 1 | gawk '{print $1;}')
+          sudo swapoff $PARTITION
+          sudo swapon -s
 
       - name: Verify dependencies
         run: go mod verify
@@ -27,15 +31,7 @@ jobs:
         run: make build
 
       - name: Test
-        run: |
-          go test -v ./... -covermode=count -coverprofile=coverage.out
-          go tool cover -func=coverage.out -o=coverage.out
-
-      - name: check
-        run: |
-          echo $GOPATH
-          pwd
-          ls -l .
+        run: make test_coverage
 
       - name: Go Coverage Badge  # Pass the `coverage.out` output to this action
         uses: tj-actions/coverage-badge-go@v1.2

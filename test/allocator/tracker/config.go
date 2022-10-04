@@ -11,13 +11,6 @@ import (
 	"github.com/pkg/errors"
 )
 
-// Config is a configuration of a tracker.
-type Config struct {
-	BackendFile   *ConfigBackendFile   `json:"backend_file"`
-	BackendMemory *ConfigBackendMemory `json:"backend_memory"`
-	Period        duration.Duration    `json:"period"`
-}
-
 // ConfigBackendFile configures file backend of a Tracker.
 type ConfigBackendFile struct {
 	Path string `json:"path"`
@@ -34,6 +27,13 @@ func (c *ConfigBackendFile) Prepare() error {
 
 // ConfigBackendMemory configures memory backend of a Tracker.
 type ConfigBackendMemory struct {
+}
+
+// Config is a configuration of a tracker.
+type Config struct {
+	BackendFile   *ConfigBackendFile   `json:"backend_file"`
+	BackendMemory *ConfigBackendMemory `json:"backend_memory"`
+	Period        duration.Duration    `json:"period"`
 }
 
 // Prepare validates config.

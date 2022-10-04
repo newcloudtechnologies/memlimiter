@@ -48,15 +48,21 @@ func TestController(t *testing.T) {
 	memoryBudgetExhausted := &stats.ServiceStatsMock{}
 	memoryBudgetExhausted.On("NextGC").Return(uint64(950 * bytefmt.MEGABYTE))
 	memoryBudgetExhausted.On("RSS").Return(uint64(900 * bytefmt.MEGABYTE))
-	memoryBudgetExhausted.On("ConsumptionReport").Return((*stats.ConsumptionReport)(nil))
+	cr1 := &stats.ConsumptionReport{
+		Cgo: map[string]uint64{"some_important_cache": 5 * bytefmt.MEGABYTE},
+	}
+	memoryBudgetExhausted.On("ConsumptionReport").Return(cr1)
 
 	// In the second case the memory budget utilization returns to the ordinary values.
 	memoryBudgetNormal := &stats.ServiceStatsMock{}
 	memoryBudgetNormal.On("NextGC").Return(uint64(300 * bytefmt.MEGABYTE))
 	memoryBudgetNormal.On("RSS").Return(uint64(500 * bytefmt.MEGABYTE))
-	memoryBudgetNormal.On("ConsumptionReport").Return((*stats.ConsumptionReport)(nil))
+	cr2 := &stats.ConsumptionReport{
+		Cgo: map[string]uint64{"some_important_cache": 1 * bytefmt.MEGABYTE},
+	}
+	memoryBudgetNormal.On("ConsumptionReport").Return(cr2)
 
-	subscriptionMock := &stats.SubscriptionMock{
+	subscriptionMock := &stats.ServiceStatsSubscriptionMock{
 		Chan: make(chan stats.ServiceStats),
 	}
 
@@ -99,7 +105,7 @@ func TestController(t *testing.T) {
 	backpressureOperatorMock.On(
 		"SetControlParameters",
 		mock.MatchedBy(func(val *stats.ControlParameters) bool {
-			return val.GOGC == 80 && val.ThrottlingPercentage == 20
+			return val.GOGC == 78 && val.ThrottlingPercentage == 22
 		}),
 	).Return(nil).Once().Run(
 		func(args mock.Arguments) {
