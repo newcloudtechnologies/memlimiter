@@ -20,7 +20,9 @@ jobs:
       - name: SWAP
         run: |
           sudo swapon -s
-          sudo swapoff $(sudo swapon -s | tail -n 1 | gawk '{print $1;}')
+          export PARTITION=$(sudo swapon -s | tail -n 1 | gawk '{print $1;}')
+          echo $PARTITION
+          sudo swapoff $PARTITION
           sudo swapon -s
 
       - name: Verify dependencies
