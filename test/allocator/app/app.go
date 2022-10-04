@@ -45,7 +45,7 @@ func (a *App) Run() {
 						return errors.Wrap(err, "make server")
 					}
 
-					return a.runAndWaitSignal(r)
+					return runAndWaitSignal(r)
 				},
 			},
 			&cli.Command{
@@ -65,7 +65,7 @@ func (a *App) Run() {
 						return errors.Wrap(err, "make perf client")
 					}
 
-					return a.runAndWaitSignal(r)
+					return runAndWaitSignal(r)
 				},
 			},
 		},
@@ -77,7 +77,7 @@ func (a *App) Run() {
 	}
 }
 
-func (a *App) runAndWaitSignal(r Runnable) error {
+func runAndWaitSignal(r Runnable) error {
 	signalChan := make(chan os.Signal, 1)
 	signal.Notify(signalChan, syscall.SIGINT, syscall.SIGTERM)
 

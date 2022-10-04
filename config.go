@@ -24,6 +24,7 @@ type Config struct {
 // Prepare validates config.
 func (c *Config) Prepare() error {
 	if c == nil {
+		// This means that user wants to use stub instead of real memlimiter
 		return nil
 	}
 

@@ -101,6 +101,7 @@ func (srv *serverImpl) Tracker() *tracker.Tracker { return srv.tracker }
 func (srv *serverImpl) Quit() {
 	srv.logger.Info("terminating server")
 	srv.grpcServer.Stop()
+	srv.memLimiter.Quit()
 }
 
 // NewServer - server constructor.

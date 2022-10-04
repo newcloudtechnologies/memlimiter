@@ -1,5 +1,7 @@
 .idea
 test/infra/allocator/config.json
 test/allocator/allocator
+test/integration/integration-test
 venv
 __pycache__
+coverage*out
