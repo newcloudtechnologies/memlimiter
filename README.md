@@ -129,3 +129,10 @@ The general conclusion is that:
 * Support popular Cgo allocators like Jemalloc or TCMalloc, parse their stats to provide information about Cgo memory consumption.
 
 Your PRs are welcome!
+
+## Publications
+
+* Isaev V. A. Go runtime high memory consumption (in Russian). Evrone Go meetup. 2022.
+  [![Preview](https://yt-embed.herokuapp.com/embed?v=_BbhmaZupqs)](
+  https://www.youtube.com/watch?v=_BbhmaZupqs
+  )
