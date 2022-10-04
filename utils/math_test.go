@@ -16,6 +16,7 @@ func TestClampFloat64(t *testing.T) {
 		min   float64
 		max   float64
 	}
+
 	tests := []struct {
 		name string
 		args args
@@ -49,7 +50,9 @@ func TestClampFloat64(t *testing.T) {
 			want: 100,
 		},
 	}
+
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			if got := ClampFloat64(tt.args.value, tt.args.min, tt.args.max); got != tt.want {
 				t.Errorf("ClampFloat64() = %v, want %v", got, tt.want)
