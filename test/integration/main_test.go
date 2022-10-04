@@ -30,7 +30,9 @@ func TestComponent(t *testing.T) {
 
 	logger := testr.New(t)
 
-	allocatorServer, err := makeServer(logger, endpoint)
+	const rssLimit = bytefmt.GIGABYTE
+
+	allocatorServer, err := makeServer(logger, endpoint, rssLimit)
 	require.NoError(t, err)
 
 	defer allocatorServer.Quit()
@@ -58,13 +60,13 @@ func TestComponent(t *testing.T) {
 	require.NoError(t, err)
 	require.NotEmpty(t, reports)
 
-	analyzeReports(t, reports)
+	analyzeReports(t, reports, rssLimit)
 }
 
-func makeServer(logger logr.Logger, endpoint string) (server.Server, error) {
+func makeServer(logger logr.Logger, endpoint string, rssLimit uint64) (server.Server, error) {
 	cfg := &server.Config{
 		MemLimiter: &memlimiter.Config{ControllerNextGC: &nextgc.ControllerConfig{
-			RSSLimit:             bytes.Bytes{Value: 1 * bytefmt.GIGABYTE},
+			RSSLimit:             bytes.Bytes{Value: rssLimit},
 			DangerZoneGOGC:       50,
 			DangerZoneThrottling: 90,
 			Period:               duration.Duration{Duration: time.Second},
@@ -106,7 +108,7 @@ func makePerfClient(logger logr.Logger, endpoint string) (*perf.Client, error) {
 	return perfClient, nil
 }
 
-func analyzeReports(t *testing.T, reports []*tracker.Report) {
+func analyzeReports(t *testing.T, reports []*tracker.Report, rssLimit float64) {
 	t.Helper()
 
 	sample := &stats.Sample{}
@@ -118,15 +120,11 @@ func analyzeReports(t *testing.T, reports []*tracker.Report) {
 		sample.Xs = append(sample.Xs, float64(r.RSS))
 	}
 
+	// We can only expect that the memory consumption wouldn't be greater than an
+	// upper consumption limit (RSSLimit), but we cannot predict the exact value
+	// because of possible existence of a SWAP partition.
 	actualRSS := sample.Mean()
 
-	const (
-		// With the fixed Perf client and MemLimiter settings provided above in this file,
-		// we expect RSS to stabilize around this point
-		expectedRSS = 800 * bytefmt.MEGABYTE
-		// Details may vary
-		delta = 50 * bytefmt.MEGABYTE
-	)
-
-	require.InDelta(t, expectedRSS, actualRSS, delta)
+	// but since this is a soft limit, we allow small exceeding of it
+	require.Less(t, actualRSS, 1.10*rssLimit)
 }

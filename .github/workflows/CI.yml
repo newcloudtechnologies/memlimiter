@@ -21,7 +21,6 @@ jobs:
         run: |
           sudo swapon -s
           export PARTITION=$(sudo swapon -s | tail -n 1 | gawk '{print $1;}')
-          echo $PARTITION
           sudo swapoff $PARTITION
           sudo swapon -s
 
