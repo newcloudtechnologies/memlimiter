@@ -62,7 +62,7 @@ func TestController(t *testing.T) {
 	}
 	memoryBudgetNormal.On("ConsumptionReport").Return(cr2)
 
-	subscriptionMock := &stats.SubscriptionMock{
+	subscriptionMock := &stats.ServiceStatsSubscriptionMock{
 		Chan: make(chan stats.ServiceStats),
 	}
 

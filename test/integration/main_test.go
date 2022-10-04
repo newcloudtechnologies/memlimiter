@@ -4,7 +4,7 @@
  * License: https://github.com/newcloudtechnologies/memlimiter/blob/master/LICENSE
  */
 
-package main
+package integration
 
 import (
 	"testing"

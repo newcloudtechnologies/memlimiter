@@ -41,5 +41,3 @@ func (b Bytes) MarshalJSON() ([]byte, error) {
 
 	return []byte(str), nil
 }
-
-func (b Bytes) String() string { return bytefmt.ByteSize(b.Value) }

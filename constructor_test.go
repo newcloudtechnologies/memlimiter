@@ -29,15 +29,20 @@ func TestConstructor(t *testing.T) {
 			nil, // use stub instead of real service
 			WithServiceStatsSubscription(subscription),
 		)
+		require.NoError(t, err)
 
 		defer service.Quit()
 
+		ss, err := service.GetStats()
 		require.NoError(t, err)
+		require.Nil(t, ss)
 
 		time.Sleep(2 * delay)
 
-		ss, err := service.GetStats()
+		ss, err = service.GetStats()
 		require.NoError(t, err)
 		require.NotNil(t, ss)
+
+		require.Nil(t, service.Middleware())
 	})
 }

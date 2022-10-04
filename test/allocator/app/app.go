@@ -40,7 +40,7 @@ func (a *App) Run() {
 					},
 				},
 				Action: func(context *cli.Context) error {
-					r, err := a.factory.MakeServerFromContext(context)
+					r, err := a.factory.MakeServer(context)
 					if err != nil {
 						return errors.Wrap(err, "make server")
 					}
@@ -60,7 +60,7 @@ func (a *App) Run() {
 					},
 				},
 				Action: func(context *cli.Context) error {
-					r, err := a.factory.MakePerfClientFromContext(context)
+					r, err := a.factory.MakePerfClient(context)
 					if err != nil {
 						return errors.Wrap(err, "make perf client")
 					}
