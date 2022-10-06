@@ -23,7 +23,9 @@ MemLimiter represents a memory budget [automated control system](https://en.wiki
 ### Memory budget utilization
 
 The core of the MemLimiter is a special object quite similar to [P-controller](https://en.wikipedia.org/wiki/PID_controller), but with certain specifics (more on that below). Memory budget utilization value acts as an input signal for the controller. We define the $Utilization$ as follows:
+
 $$ Utilization = \frac {NextGC} {RSS_{limit} - CGO} $$
+
 where:
 * $NextGC$ ([from here](https://pkg.go.dev/runtime#MemStats)) is a target size for heap, upon reaching which the Go runtime will launch the GC next time;
 * $RSS_{limit}$ is a hard limit for service's physical memory (`RSS`) consumption (so that exceeding this limit will highly likely result in OOM);
