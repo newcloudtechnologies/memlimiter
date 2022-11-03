@@ -47,6 +47,7 @@ func (s *serviceImpl) GetStats() (*stats.MemLimiterStats, error) {
 }
 
 func (s *serviceImpl) Quit() {
+	s.logger.Info("terminating MemLimiter service")
 	s.controller.Quit()
 	s.statsSubscription.Quit()
 }
@@ -65,6 +66,8 @@ func newServiceImpl(
 	if statsSubscription == nil {
 		return nil, errors.New("nil tracker subscription passed")
 	}
+
+	logger.Info("starting MemLimiter service")
 
 	c, err := nextgc.NewControllerFromConfig(
 		logger,

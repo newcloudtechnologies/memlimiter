@@ -21,6 +21,10 @@ test_coverage: unit_test integration_test
 	# final report
 	go tool cover -func=coverage.overall.out -o=coverage.out
 
+fix:
+	go fmt .
+	go mod tidy
+
 lint:
 	golangci-lint run -c .golangci.yml ./...
 
