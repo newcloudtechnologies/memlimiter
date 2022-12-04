@@ -1,14 +1,11 @@
 [![Go Reference](https://pkg.go.dev/badge/github.com/newcloudtechnologies/memlimiter.svg)](https://pkg.go.dev/github.com/newcloudtechnologies/memlimiter)
 [![Go Report Card](https://goreportcard.com/badge/github.com/newcloudtechnologies/memlimiter)](https://goreportcard.com/report/github.com/newcloudtechnologies/memlimiter)
-![Coverage](https://img.shields.io/badge/Coverage-80.1%25-brightgreen)
+![Coverage](https://img.shields.io/badge/Coverage-80.3%25-brightgreen)
 ![CI](https://github.com/newcloudtechnologies/memlimiter/actions/workflows/CI.yml/badge.svg)
 
 # MemLimiter
 
 Library that helps to limit memory consumption of your Go service.
-
-Notice: All APIs in this package are experimental and may be removed in a
-later release.
 
 ## Working principles
 As of today (Go 1.18), there is a possibility for any Go application to be eventually stopped by OOM killer. The memory leak is because Go runtime knows nothing about the limitations imposed on the process by the operating system (for instance, using `cgroups`). However, an unexpected termination of a process because of OOM is highly undesirable, as it can lead to cache resetting, data integrity violation, distributed transaction hanging and even cascading failure of a distributed backend. Therefore, services should degrade gracefully instead of immediate stop due to `SIGKILL`.
