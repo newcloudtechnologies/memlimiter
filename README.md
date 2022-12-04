@@ -1,6 +1,6 @@
 [![Go Reference](https://pkg.go.dev/badge/github.com/newcloudtechnologies/memlimiter.svg)](https://pkg.go.dev/github.com/newcloudtechnologies/memlimiter)
 [![Go Report Card](https://goreportcard.com/badge/github.com/newcloudtechnologies/memlimiter)](https://goreportcard.com/report/github.com/newcloudtechnologies/memlimiter)
-![Coverage](https://img.shields.io/badge/Coverage-80.3%25-brightgreen)
+![Coverage](https://img.shields.io/badge/Coverage-80.1%25-brightgreen)
 ![CI](https://github.com/newcloudtechnologies/memlimiter/actions/workflows/CI.yml/badge.svg)
 
 # MemLimiter
