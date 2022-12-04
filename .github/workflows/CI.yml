@@ -15,7 +15,17 @@ jobs:
           persist-credentials: false # otherwise, the token used is the GITHUB_TOKEN, instead of your personal access token.
           fetch-depth: 0 # otherwise, there would be errors pushing refs to the destination repository.
 
-      - uses: actions/setup-go@v3
+      - uses: actions/setup-go@v2
+        with:
+          go-version: '1.18'
+
+      - name: Verify dependencies
+        run: |
+          go get -v -t ./...
+          go mod verify
+
+      - name: Build
+        run: make build
 
       - name: SWAP
         run: |
@@ -23,12 +33,6 @@ jobs:
           export PARTITION=$(sudo swapon -s | tail -n 1 | gawk '{print $1;}')
           sudo swapoff $PARTITION
           sudo swapon -s
-
-      - name: Verify dependencies
-        run: go mod verify
-
-      - name: Build
-        run: make build
 
       - name: Test
         run: make test_coverage
@@ -58,11 +62,3 @@ jobs:
         with:
           github_token: ${{ github.token }}
           branch: ${{ github.head_ref }}
-
-      - name: Lint
-        uses: golangci/golangci-lint-action@v3
-        with:
-          version: v1.42.1
-          args: -c .golangci.yml --timeout=10m
-          skip-pkg-cache: true
-          skip-build-cache: true
