@@ -8,13 +8,13 @@ package app
 
 import (
 	"encoding/json"
-	"io/ioutil"
+	"fmt"
+	"os"
 	"path/filepath"
 
 	"github.com/go-logr/logr"
 	"github.com/newcloudtechnologies/memlimiter/test/allocator/perf"
 	"github.com/newcloudtechnologies/memlimiter/test/allocator/server"
-	"github.com/pkg/errors"
 	"github.com/urfave/cli/v2"
 )
 
@@ -42,20 +42,20 @@ type factoryDefault struct {
 func (f *factoryDefault) MakeServer(c *cli.Context) (Runnable, error) {
 	filename := c.String("config")
 
-	data, err := ioutil.ReadFile(filepath.Clean(filename))
+	data, err := os.ReadFile(filepath.Clean(filename))
 	if err != nil {
-		return nil, errors.Wrap(err, "ioutil readfile")
+		return nil, fmt.Errorf("os readfile: %w", err)
 	}
 
 	cfg := &server.Config{}
 
 	if err = json.Unmarshal(data, cfg); err != nil {
-		return nil, errors.Wrap(err, "unmarshal")
+		return nil, fmt.Errorf("unmarshal: %w", err)
 	}
 
 	srv, err := server.NewServer(f.logger, cfg)
 	if err != nil {
-		return nil, errors.Wrap(err, "new allocator server")
+		return nil, fmt.Errorf("new allocator server: %w", err)
 	}
 
 	return srv, nil
@@ -65,20 +65,20 @@ func (f *factoryDefault) MakeServer(c *cli.Context) (Runnable, error) {
 func (f *factoryDefault) MakePerfClient(c *cli.Context) (Runnable, error) {
 	filename := c.String("config")
 
-	data, err := ioutil.ReadFile(filepath.Clean(filename))
+	data, err := os.ReadFile(filepath.Clean(filename))
 	if err != nil {
-		return nil, errors.Wrap(err, "ioutil readfile")
+		return nil, fmt.Errorf("os readfile: %w", err)
 	}
 
 	cfg := &perf.Config{}
 
 	if err = json.Unmarshal(data, cfg); err != nil {
-		return nil, errors.Wrap(err, "unmarshal")
+		return nil, fmt.Errorf("unmarshal: %w", err)
 	}
 
 	cl, err := perf.NewClient(f.logger, cfg)
 	if err != nil {
-		return nil, errors.Wrap(err, "new allocator server")
+		return nil, fmt.Errorf("new allocator server: %w", err)
 	}
 
 	return cl, nil

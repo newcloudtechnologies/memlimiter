@@ -100,7 +100,11 @@ func TestBytesByPointer(t *testing.T) {
 func TestBytesZeroValue(t *testing.T) {
 	var ts testStruct
 
-	data := []byte(`{"size": "0"}`)
+	data := []byte(`{"size": "20M"}`)
 	assert.NoError(t, json.Unmarshal(data, &ts))
-	assert.Equal(t, uint64(0*bytefmt.MEGABYTE), ts.Size.Value)
+	assert.Equal(t, uint64(20*bytefmt.MEGABYTE), ts.Size.Value)
+
+	data = []byte(`{"size": "0"}`)
+	assert.NoError(t, json.Unmarshal(data, &ts))
+	assert.Equal(t, uint64(0), ts.Size.Value)
 }

@@ -7,12 +7,12 @@
 package backpressure
 
 import (
+	"fmt"
 	"runtime/debug"
 	"sync/atomic"
 
 	"github.com/go-logr/logr"
 	"github.com/newcloudtechnologies/memlimiter/stats"
-	"github.com/pkg/errors"
 )
 
 var _ Operator = (*operatorImpl)(nil)
@@ -35,7 +35,7 @@ func (b *operatorImpl) GetStats() (*stats.BackpressureStats, error) {
 
 		result.ControlParameters, ok = lastControlParameters.(*stats.ControlParameters)
 		if !ok {
-			return nil, errors.Errorf("ivalid type cast (%T)", lastControlParameters)
+			return nil, fmt.Errorf("ivalid type cast (%T)", lastControlParameters)
 		}
 	}
 
@@ -53,7 +53,7 @@ func (b *operatorImpl) SetControlParameters(value *stats.ControlParameters) erro
 
 	// set the share of the requests that have to be throttled
 	if err := b.throttler.setThreshold(value.ThrottlingPercentage); err != nil {
-		return errors.Wrap(err, "throttler set threshold")
+		return fmt.Errorf("throttler set threshold: %w", err)
 	}
 
 	// tune GC pace
@@ -65,7 +65,7 @@ func (b *operatorImpl) SetControlParameters(value *stats.ControlParameters) erro
 	if b.notificationChan != nil {
 		backpressureStats, err := b.GetStats()
 		if err != nil {
-			return errors.Wrap(err, "get stats")
+			return fmt.Errorf("get stats: %w", err)
 		}
 
 		memLimiterStats := &stats.MemLimiterStats{

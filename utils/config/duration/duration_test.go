@@ -113,7 +113,15 @@ func TestDurationByPointer(t *testing.T) {
 func TestDurationZeroValue(t *testing.T) {
 	var ts testStruct
 
-	data := []byte(`{"size": "0"}`)
+	data := []byte(`{"timeout":"2s"}`)
+	assert.NoError(t, json.Unmarshal(data, &ts))
+	assert.Equal(t, 2*time.Second, ts.Timeout.Duration)
+
+	data = []byte(`{"timeout":"0"}`)
+	assert.NoError(t, json.Unmarshal(data, &ts))
+	assert.Equal(t, 0*time.Second, ts.Timeout.Duration)
+
+	data = []byte(`{"timeout":""}`)
 	assert.NoError(t, json.Unmarshal(data, &ts))
 	assert.Equal(t, 0*time.Second, ts.Timeout.Duration)
 }

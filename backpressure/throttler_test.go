@@ -22,7 +22,7 @@ func TestThrottler(t *testing.T) {
 	)
 
 	// Check different throttling levels with 10% step.
-	for i := 0; i < 10; i++ {
+	for i := range 10 {
 		throttlingLevel := uint32(i) * 10
 
 		t.Run(fmt.Sprintf("throttling level = %v", throttlingLevel), func(t *testing.T) {
@@ -37,7 +37,7 @@ func TestThrottler(t *testing.T) {
 			failed := utils.NewCounter(nil)
 			succeeded := utils.NewCounter(nil)
 
-			for i := 0; i < requests; i++ {
+			for range requests {
 				go func() {
 					defer wg.Done()
 
@@ -103,7 +103,6 @@ func BenchmarkThrottler(b *testing.B) {
 	const requests = 1000
 
 	for _, throttlingLevel := range []uint32{0, 50, 100} {
-		throttlingLevel := throttlingLevel
 
 		b.Run(fmt.Sprintf("throttling level = %v", throttlingLevel), func(b *testing.B) {
 			th := newThrottler()
@@ -120,15 +119,13 @@ func BenchmarkThrottler(b *testing.B) {
 
 				b.StartTimer()
 
-				for i := 0; i < requests; i++ {
-					wg.Add(1)
+				for range requests {
 
-					go func() {
-						defer wg.Done()
+					wg.Go(func() {
 
 						// assign result to fictive variable to disallow compiler to optimize out function call
 						allowed = th.AllowRequest()
-					}()
+					})
 				}
 				wg.Wait()
 

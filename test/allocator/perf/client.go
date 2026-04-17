@@ -8,25 +8,26 @@ package perf
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/go-logr/logr"
+	"github.com/newcloudtechnologies/memlimiter/utils"
 	"github.com/newcloudtechnologies/memlimiter/utils/config/prepare"
-	"github.com/rcrowley/go-metrics"
 	"golang.org/x/time/rate"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/protobuf/types/known/durationpb"
 
 	"github.com/newcloudtechnologies/memlimiter/test/allocator/schema"
 	"github.com/newcloudtechnologies/memlimiter/utils/breaker"
-	"github.com/pkg/errors"
 )
 
 // Client - client for performance testing.
 type Client struct {
 	startTime        time.Time
 	client           schema.AllocatorClient
-	requestsInFlight metrics.Counter
+	requestsInFlight utils.Counter
 	grpcConn         *grpc.ClientConn
 	breaker          *breaker.Breaker
 	cfg              *Config
@@ -36,7 +37,7 @@ type Client struct {
 // Run starts load session.
 func (p *Client) Run() error {
 	if err := p.breaker.Inc(); err != nil {
-		return errors.Wrap(err, "breaker inc")
+		return fmt.Errorf("breaker inc: %w", err)
 	}
 
 	defer p.breaker.Dec()
@@ -53,12 +54,12 @@ func (p *Client) Run() error {
 	for {
 		// wait till limiter allows to fire a request
 		if err := limiter.Wait(p.breaker); err != nil {
-			return errors.Wrap(err, "limiter wait")
+			return fmt.Errorf("limiter wait: %w", err)
 		}
 
 		// increment request copies
 		if err := p.breaker.Inc(); err != nil {
-			return errors.Wrap(err, "breaker inc")
+			return fmt.Errorf("breaker inc: %w", err)
 		}
 
 		go p.makeRequest()
@@ -119,12 +120,12 @@ func (p *Client) Quit() {
 // NewClient creates new client for performance tests.
 func NewClient(logger logr.Logger, cfg *Config) (*Client, error) {
 	if err := prepare.Prepare(cfg); err != nil {
-		return nil, errors.Wrap(err, "configs prepare")
+		return nil, fmt.Errorf("configs prepare: %w", err)
 	}
 
-	grpcConn, err := grpc.Dial(cfg.Endpoint, grpc.WithInsecure())
+	grpcConn, err := grpc.NewClient(cfg.Endpoint, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
-		return nil, errors.Wrap(err, "dial error")
+		return nil, fmt.Errorf("dial error: %w", err)
 	}
 
 	client := schema.NewAllocatorClient(grpcConn)
@@ -135,7 +136,7 @@ func NewClient(logger logr.Logger, cfg *Config) (*Client, error) {
 		client:           client,
 		startTime:        time.Now(),
 		cfg:              cfg,
-		requestsInFlight: metrics.NewCounter(),
+		requestsInFlight: utils.NewCounter(nil),
 		breaker:          breaker.NewBreaker(),
 	}, nil
 }

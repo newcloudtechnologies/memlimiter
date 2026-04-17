@@ -1,21 +1,54 @@
+# MemLimiter
+
 [![Go Reference](https://pkg.go.dev/badge/github.com/newcloudtechnologies/memlimiter.svg)](https://pkg.go.dev/github.com/newcloudtechnologies/memlimiter)
 [![Go Report Card](https://goreportcard.com/badge/github.com/newcloudtechnologies/memlimiter)](https://goreportcard.com/report/github.com/newcloudtechnologies/memlimiter)
 ![Coverage](https://img.shields.io/badge/Coverage-80.1%25-brightgreen)
 ![CI](https://github.com/newcloudtechnologies/memlimiter/actions/workflows/CI.yml/badge.svg)
 
-# MemLimiter
+`memlimiter` helps a Go service avoid OOM by combining adaptive GC tuning and request throttling under memory pressure.
 
-Library that helps to limit memory consumption of your Go service.
+It observes process memory (`RSS`) and Go heap pressure (`runtime.MemStats.NextGC`) and turns that into:
+
+- dynamic `debug.SetGCPercent` tuning,
+- request shedding / backpressure via middleware.
+
+By default, stats come from:
+
+- [`runtime.ReadMemStats`](https://pkg.go.dev/runtime#ReadMemStats) for Go heap state,
+- `gopsutil` for process RSS.
+
+For cgo/external-memory workloads, applications should provide their own `stats.ServiceStatsSubscription` and report non-Go allocations through `ConsumptionReport.Cgo`.
+
+The repo also includes:
+
+- gRPC middleware for admission control,
+- an allocator demo under `test/allocator`,
+- integration tests and plotting scripts.
+
+## Is this still needed on Go 1.26.1?
+
+For pure-Go services, usually not as a first step: start with `GOMEMLIMIT` / `runtime/debug.SetMemoryLimit` and standard admission control (see [`SetMemoryLimit`](https://pkg.go.dev/runtime/debug#SetMemoryLimit) and [Go 1.19 runtime notes](https://go.dev/doc/go1.19#runtime)).
+
+For cgo-heavy or mixed-memory services, it can still be useful because the Go memory limit does not account for external C allocations. In that setup, `memlimiter` can reduce the Go-side budget as external memory grows and apply backpressure.
+
+## When memlimiter fits best in 2026
+
+- You need explicit accounting of external/cgo memory.
+- You want dynamic Go-side budget reduction.
+- You need request shedding under pressure.
+
+## Go memory references
+
+- [A Guide to the Go Garbage Collector](https://go.dev/doc/gc-guide)
+- [`runtime/debug.SetMemoryLimit`](https://pkg.go.dev/runtime/debug#SetMemoryLimit)
+- [`runtime.MemStats`](https://pkg.go.dev/runtime#MemStats)
 
 ## Working principles
-As of today (Go 1.18), there is a possibility for any Go application to be eventually stopped by OOM killer. The memory leak is because Go runtime knows nothing about the limitations imposed on the process by the operating system (for instance, using `cgroups`). However, an unexpected termination of a process because of OOM is highly undesirable, as it can lead to cache resetting, data integrity violation, distributed transaction hanging and even cascading failure of a distributed backend. Therefore, services should degrade gracefully instead of immediate stop due to `SIGKILL`.
 
-A universal solution for programming languages with automatic memory management comprises two parts:
+MemLimiter is a memory-budget [automated control system](https://en.wikipedia.org/wiki/Control_system) that combines:
 
-1. **Garbage collection intensification**. The more often GC starts, the more garbage will be collected, the fewer new physical memory allocations we have to make for the service’s business logic.
-2. **Request throttling**. By suppressing some of the incoming requests, we implement the backpressure: the middleware simply cuts off part of the load coming from the client in order to avoid too many memory allocations.
-
-MemLimiter represents a memory budget [automated control system](https://en.wikipedia.org/wiki/Control_system) that helps to keep the memory consumption of a Go service within a predefined limit. 
+1. **Garbage collection intensification**. The more often GC starts, the more garbage is collected, so fewer new physical allocations are needed for business logic.
+2. **Request throttling**. By suppressing part of incoming requests, middleware applies backpressure and reduces allocation pressure.
 
 ### Memory budget utilization
 
@@ -24,9 +57,10 @@ The core of the MemLimiter is a special object quite similar to [P-controller](h
 $$ Utilization = \frac {NextGC} {RSS_{limit} - CGO} $$
 
 where:
-* $NextGC$ ([from here](https://pkg.go.dev/runtime#MemStats)) is a target size for heap, upon reaching which the Go runtime will launch the GC next time;
-* $RSS_{limit}$ is a hard limit for service's physical memory (`RSS`) consumption (so that exceeding this limit will highly likely result in OOM);
-* $CGO$ is a total size of heap allocations made beyond `Cgo` borders (within `C`/`C++`/.... libraries).
+
+- $NextGC$ ([from here](https://pkg.go.dev/runtime#MemStats)) is a target size for heap, upon reaching which the Go runtime will launch the GC next time;
+- $RSS_{limit}$ is a hard limit for service's physical memory (`RSS`) consumption (so that exceeding this limit will highly likely result in OOM);
+- $CGO$ is a total size of heap allocations made beyond `Cgo` borders (within `C`/`C++`/.... libraries).
 
 A few notes about $CGO$ component. Allocations made outside of the Go allocator, of course, are not controlled by the Go runtime in any way. At the same time, the memory consumption limit is common for both Go and non-Go allocators. Therefore, if non-Go allocations grow, all we can do is shrink the memory budget for Go allocations (which is why we subtract $CGO$ from the denominator of the previous expression). If your service uses `Cgo`, you need to figure out how much memory is allocated “on the other side” – **otherwise MemLimiter won’t be able to save your service from OOM**.
 
@@ -52,7 +86,6 @@ $$ Output = \begin{cases}
 \end{cases}$$
 
 Finally we convert the dimensionless quantity $Output$ into specific $GOGC$ (for the further use in [`debug.SetGCPercent`](https://pkg.go.dev/runtime/debug#SetGCPercent)) and $Throttling$ (percentage of suppressed requests) values, however, only if the $Utilization$ exceeds the specified limits:
-
 
 $$ GC = \begin{cases}
 \displaystyle Output \ \ \ Utilization \gt DangerZoneGC \\
@@ -89,24 +122,24 @@ You must also provide your own `stats.ServiceStatsSubscription` and `stats.Servi
 
 There are several key settings in MemLimiter [configuration](controller/nextgc/config.go):
 
-* `RSSLimit`
-* `DangerZoneGC` 
-* `DangerZoneThrottling` 
-* `Period`
-* `WindowSize`
-* `Coefficient` ($C_{p}$)
+- `RSSLimit`
+- `DangerZoneGC`
+- `DangerZoneThrottling`
+- `Period`
+- `WindowSize`
+- `Coefficient` ($C_{p}$)
 
 You have to pick them empirically for your service. The settings must correspond to the business logic features of a particular service and to the workload expected.
 
 We made a series of performance tests with [Allocator][test/allocator] - an example service which does nothing but allocations that reside in memory for some time. We used different settings, applied the same load and tracked the RSS of a process.
 
 Settings ranges:
-* $RSS_{limit} = {1G}$
-* $DangerZoneGC = 50%$
-* $DangerZoneThrottling = 90%$
-* $Period = 100ms$
-* $WindowSize = 20$
-* $C_{p} \in \\{0, 0.5, 1, 5, 10, 50, 100\\}$
+- $RSS_{limit} = {1G}$
+- $DangerZoneGC = 50%$
+- $DangerZoneThrottling = 90%$
+- $Period = 100ms$
+- $WindowSize = 20$
+- $C_{p} \in \\{0, 0.5, 1, 5, 10, 50, 100\\}$
 
 These plots may give you some inspiration on how $C_{p}$ value affects the physical memory consumption other things being equal:
 
@@ -117,21 +150,21 @@ And the summary plot with RSS consumption dependence on $C_{p}$ value:
 ![RSS](docs/rss_hl.png)
 
 The general conclusion is that:
-* The higher the $C_{p}$ is, the lower the $RSS$ consumption.
-* Too low and too high $C_{p}$ values cause self-oscillation of control parameters.
-* Disabling MemLimiter causes OOM.
+- The higher the $C_{p}$ is, the lower the $RSS$ consumption.
+- Too low and too high $C_{p}$ values cause self-oscillation of control parameters.
+- Disabling MemLimiter causes OOM.
 
 ## TODO
 
-* Extend middleware.Middleware to support more frameworks.
-* Add GOGC limitations to prevent death spirals.
-* Support popular Cgo allocators like Jemalloc or TCMalloc, parse their stats to provide information about Cgo memory consumption.
+- Extend middleware.Middleware to support more frameworks.
+- Add GOGC limitations to prevent death spirals.
+- Support popular Cgo allocators like Jemalloc or TCMalloc, parse their stats to provide information about Cgo memory consumption.
 
 Your PRs are welcome!
 
 ## Publications
 
-* Isaev V. A. Go runtime high memory consumption (in Russian). Evrone Go meetup. 2022.
+- Isaev V. A. Go runtime high memory consumption (in Russian). Evrone Go meetup. 2022.\
   [![Preview](https://yt-embed.herokuapp.com/embed?v=_BbhmaZupqs)](
   https://www.youtube.com/watch?v=_BbhmaZupqs
   )

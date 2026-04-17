@@ -8,10 +8,11 @@ package tracker
 
 import (
 	"encoding/csv"
+	"errors"
+	"fmt"
 	"os"
 
 	"github.com/go-logr/logr"
-	"github.com/pkg/errors"
 )
 
 var _ backend = (*backendFile)(nil)
@@ -24,13 +25,13 @@ type backendFile struct {
 
 func (b *backendFile) saveReport(r *Report) error {
 	if err := b.writer.Write(r.toCsv()); err != nil {
-		return errors.Wrap(err, "csv write")
+		return fmt.Errorf("csv write: %w", err)
 	}
 
 	b.writer.Flush()
 
 	if err := b.writer.Error(); err != nil {
-		return errors.Wrap(err, "csv flush")
+		return fmt.Errorf("csv flush: %w", err)
 	}
 
 	return nil
@@ -51,13 +52,13 @@ func newBackendFile(logger logr.Logger, cfg *ConfigBackendFile) (backend, error)
 
 	fd, err := os.OpenFile(cfg.Path, os.O_CREATE|os.O_APPEND|os.O_WRONLY|os.O_SYNC|os.O_TRUNC, perm)
 	if err != nil {
-		return nil, errors.Wrap(err, "open file")
+		return nil, fmt.Errorf("open file: %w", err)
 	}
 
 	wr := csv.NewWriter(fd)
 
 	if err := wr.Write(new(Report).headers()); err != nil {
-		return nil, errors.Wrap(err, "write header")
+		return nil, fmt.Errorf("write header: %w", err)
 	}
 
 	return &backendFile{logger: logger, writer: wr, fd: fd}, nil

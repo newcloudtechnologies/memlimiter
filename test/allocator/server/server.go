@@ -8,6 +8,7 @@ package server
 
 import (
 	"context"
+	"fmt"
 	"math/rand"
 	"net"
 	"time"
@@ -17,7 +18,6 @@ import (
 	"github.com/newcloudtechnologies/memlimiter/test/allocator/schema"
 	"github.com/newcloudtechnologies/memlimiter/test/allocator/tracker"
 	"github.com/newcloudtechnologies/memlimiter/utils/config/prepare"
-	"github.com/pkg/errors"
 	"google.golang.org/grpc"
 )
 
@@ -55,7 +55,7 @@ func (srv *serverImpl) MakeAllocation(_ context.Context, request *schema.MakeAll
 		slice = make([]byte, int(request.Size))
 		//nolint:gosec
 		if _, err := rand.Read(slice); err != nil {
-			return nil, errors.Wrap(err, "rand read")
+			return nil, fmt.Errorf("rand read: %w", err)
 		}
 	}
 
@@ -80,13 +80,13 @@ func (srv *serverImpl) Run() error {
 
 	listener, err := net.Listen("tcp", endpoint)
 	if err != nil {
-		return errors.Wrap(err, "net listen")
+		return fmt.Errorf("net listen: %w", err)
 	}
 
 	srv.logger.Info("starting listening", "endpoint", endpoint)
 
 	if err = srv.grpcServer.Serve(listener); err != nil {
-		return errors.Wrap(err, "grpc server serve")
+		return fmt.Errorf("grpc server serve: %w", err)
 	}
 
 	return nil
@@ -107,17 +107,17 @@ func (srv *serverImpl) Quit() {
 // NewServer - server constructor.
 func NewServer(logger logr.Logger, cfg *Config, options ...grpc.ServerOption) (Server, error) {
 	if err := prepare.Prepare(cfg); err != nil {
-		return nil, errors.Wrap(err, "configs prepare")
+		return nil, fmt.Errorf("configs prepare: %w", err)
 	}
 
 	memLimiter, err := memlimiter.NewServiceFromConfig(logger, cfg.MemLimiter)
 	if err != nil {
-		return nil, errors.Wrap(err, "new MemLimiter from config")
+		return nil, fmt.Errorf("new MemLimiter from config: %w", err)
 	}
 
 	tr, err := tracker.NewTrackerFromConfig(logger, cfg.Tracker, memLimiter)
 	if err != nil {
-		return nil, errors.Wrap(err, "new tracker from config")
+		return nil, fmt.Errorf("new tracker from config: %w", err)
 	}
 
 	if cfg.MemLimiter != nil {

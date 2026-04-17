@@ -7,26 +7,25 @@
 package nextgc
 
 import (
+	"fmt"
 	"math"
+	"sync"
 
 	"github.com/go-logr/logr"
-	metrics "github.com/rcrowley/go-metrics"
-
-	"github.com/pkg/errors"
 )
 
 // The proportional component of the controller.
 type componentP struct {
-	lastValues metrics.Sample
-	cfg        *ComponentProportionalConfig
-	logger     logr.Logger
+	valueSmoother *emaSmoother
+	cfg           *ComponentProportionalConfig
+	logger        logr.Logger
 }
 
 func (c *componentP) value(utilization float64) (float64, error) {
-	if c.lastValues != nil {
+	if c.valueSmoother != nil {
 		valueEMA, err := c.valueEMA(utilization)
 		if err != nil {
-			return math.NaN(), errors.Wrap(err, "value EMA")
+			return math.NaN(), fmt.Errorf("value EMA: %w", err)
 		}
 
 		return valueEMA, nil
@@ -34,7 +33,7 @@ func (c *componentP) value(utilization float64) (float64, error) {
 
 	valueRaw, err := c.valueRaw(utilization)
 	if err != nil {
-		return math.NaN(), errors.Wrap(err, "value raw")
+		return math.NaN(), fmt.Errorf("value raw: %w", err)
 	}
 
 	return valueRaw, nil
@@ -42,7 +41,7 @@ func (c *componentP) value(utilization float64) (float64, error) {
 
 func (c *componentP) valueRaw(utilization float64) (float64, error) {
 	if utilization < 0 {
-		return math.NaN(), errors.Errorf("value is undefined if memory usage = %v", utilization)
+		return math.NaN(), fmt.Errorf("value is undefined if memory usage = %v", utilization)
 	}
 
 	if utilization >= 1 {
@@ -66,15 +65,10 @@ func (c *componentP) valueRaw(utilization float64) (float64, error) {
 func (c *componentP) valueEMA(utilization float64) (float64, error) {
 	valueRaw, err := c.valueRaw(utilization)
 	if err != nil {
-		return 0, errors.Wrap(err, "value raw")
+		return 0, fmt.Errorf("value raw: %w", err)
 	}
 
-	// TODO: need to find statistical library working with floats to make this conversion unnecessary
-	const reductionFactor = 100
-
-	c.lastValues.Update(int64(valueRaw * reductionFactor))
-
-	return c.lastValues.Mean() / reductionFactor, nil
+	return c.valueSmoother.Update(valueRaw), nil
 }
 
 func newComponentP(logger logr.Logger, cfg *ComponentProportionalConfig) *componentP {
@@ -91,8 +85,35 @@ func newComponentP(logger logr.Logger, cfg *ComponentProportionalConfig) *compon
 		//nolint:gomnd
 		alpha := 2 / (float64(cfg.WindowSize + 1))
 
-		out.lastValues = metrics.NewExpDecaySample(int(cfg.WindowSize), alpha)
+		out.valueSmoother = newEMASmoother(alpha)
 	}
 
 	return out
+}
+
+type emaSmoother struct {
+	mu          sync.Mutex
+	alpha       float64
+	initialized bool
+	value       float64
+}
+
+func newEMASmoother(alpha float64) *emaSmoother {
+	return &emaSmoother{alpha: alpha}
+}
+
+func (e *emaSmoother) Update(v float64) float64 {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+
+	if !e.initialized {
+		e.value = v
+		e.initialized = true
+
+		return e.value
+	}
+
+	e.value = e.alpha*v + (1-e.alpha)*e.value
+
+	return e.value
 }

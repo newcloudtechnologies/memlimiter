@@ -7,13 +7,13 @@
 package stats
 
 import (
+	"fmt"
 	"os"
 	"runtime"
 	"time"
 
 	"github.com/go-logr/logr"
 	"github.com/newcloudtechnologies/memlimiter/utils/breaker"
-	"github.com/pkg/errors"
 	"github.com/shirou/gopsutil/v3/process"
 )
 
@@ -48,12 +48,12 @@ func (s *subscriptionDefault) makeServiceStats() (ServiceStats, error) {
 
 	pr, err := process.NewProcess(s.pid)
 	if err != nil {
-		return nil, errors.Wrap(err, "new pr")
+		return nil, fmt.Errorf("new pr: %w", err)
 	}
 
 	processMemoryInfo, err := pr.MemoryInfoEx()
 	if err != nil {
-		return nil, errors.Wrap(err, "process memory info ex")
+		return nil, fmt.Errorf("process memory info ex: %w", err)
 	}
 
 	return serviceStatsDefault{

@@ -30,7 +30,6 @@ func TestConfigBackendFile_Prepare(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			c := &ConfigBackendFile{
 				Path: tt.fields.Path,
@@ -78,7 +77,6 @@ func TestConfig_Prepare(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			c := &Config{
 				BackendFile:   tt.fields.BackendFile,

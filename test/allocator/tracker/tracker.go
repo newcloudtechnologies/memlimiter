@@ -7,12 +7,13 @@
 package tracker
 
 import (
+	"errors"
+	"fmt"
 	"time"
 
 	"github.com/go-logr/logr"
 	"github.com/newcloudtechnologies/memlimiter"
 	"github.com/newcloudtechnologies/memlimiter/utils/breaker"
-	"github.com/pkg/errors"
 )
 
 // Tracker is responsible for service stats persistence.
@@ -31,7 +32,7 @@ func (tr *Tracker) makeReport() (*Report, error) {
 
 	mlStats, err := tr.memLimiter.GetStats()
 	if err != nil {
-		return nil, errors.Wrap(err, "memlimiter stats")
+		return nil, fmt.Errorf("memlimiter stats: %w", err)
 	}
 
 	if mlStats != nil {
@@ -50,11 +51,11 @@ func (tr *Tracker) makeReport() (*Report, error) {
 func (tr *Tracker) dumpReport() error {
 	r, err := tr.makeReport()
 	if err != nil {
-		return errors.Wrap(err, "dump Report")
+		return fmt.Errorf("dump Report: %w", err)
 	}
 
 	if err = tr.backend.saveReport(r); err != nil {
-		return errors.Wrap(err, "backend save Report")
+		return fmt.Errorf("backend save Report: %w", err)
 	}
 
 	return nil
@@ -82,7 +83,7 @@ func (tr *Tracker) loop() {
 func (tr *Tracker) GetReports() ([]*Report, error) {
 	out, err := tr.backend.getReports()
 	if err != nil {
-		return nil, errors.Wrap(err, "backend get reports")
+		return nil, fmt.Errorf("backend get reports: %w", err)
 	}
 
 	return out, nil
@@ -111,7 +112,7 @@ func NewTrackerFromConfig(logger logr.Logger, cfg *Config, memLimiter memlimiter
 	}
 
 	if err != nil {
-		return nil, errors.Wrap(err, "new backend")
+		return nil, fmt.Errorf("new backend: %w", err)
 	}
 
 	tr := &Tracker{

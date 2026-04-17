@@ -7,8 +7,9 @@
 package tracker
 
 import (
+	"errors"
+
 	"github.com/newcloudtechnologies/memlimiter/utils/config/duration"
-	"github.com/pkg/errors"
 )
 
 // ConfigBackendFile configures file backend of a Tracker.

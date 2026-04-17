@@ -7,13 +7,13 @@
 package nextgc
 
 import (
+	"fmt"
 	"math"
 	"time"
 
 	"github.com/go-logr/logr"
 	"github.com/newcloudtechnologies/memlimiter/stats"
 	"github.com/newcloudtechnologies/memlimiter/utils/breaker"
-	"github.com/pkg/errors"
 
 	"github.com/newcloudtechnologies/memlimiter/backpressure"
 	"github.com/newcloudtechnologies/memlimiter/controller"
@@ -64,14 +64,14 @@ func (c *controllerImpl) GetStats() (*stats.ControllerStats, error) {
 	select {
 	case c.getStatsChan <- req:
 	case <-c.breaker.Done():
-		return nil, errors.Wrap(c.breaker.Err(), "breaker err")
+		return nil, fmt.Errorf("breaker err: %w", c.breaker.Err())
 	}
 
 	select {
 	case resp := <-req.result:
 		return resp, nil
 	case <-c.breaker.Done():
-		return nil, errors.Wrap(c.breaker.Err(), "breaker err")
+		return nil, fmt.Errorf("breaker err: %w", c.breaker.Err())
 	}
 }
 
@@ -108,7 +108,7 @@ func (c *controllerImpl) updateState(serviceStats stats.ServiceStats) error {
 	c.updateUtilization(serviceStats)
 
 	if err := c.updateControlValues(); err != nil {
-		return errors.Wrap(err, "update control values")
+		return fmt.Errorf("update control values: %w", err)
 	}
 
 	c.updateControlParameters()
@@ -149,7 +149,7 @@ func (c *controllerImpl) updateControlValues() error {
 
 	c.pValue, err = c.componentP.value(c.utilization)
 	if err != nil {
-		return errors.Wrap(err, "component proportional value")
+		return fmt.Errorf("component proportional value: %w", err)
 	}
 
 	// TODO: if new components appear, summarize their outputs here:
@@ -207,7 +207,7 @@ func (c *controllerImpl) updateControlParameterThrottling() {
 
 func (c *controllerImpl) applyControlValue() error {
 	if err := c.output.SetControlParameters(c.controlParameters); err != nil {
-		return errors.Wrapf(err, "set control parameters: %v", c.controlParameters)
+		return fmt.Errorf("set control parameters: %v: %w", c.controlParameters, err)
 	}
 
 	return nil
@@ -266,7 +266,7 @@ func NewControllerFromConfig(
 
 	// initialize backpressure operator with default control signal
 	if err := c.applyControlValue(); err != nil {
-		return nil, errors.Wrap(err, "apply control value")
+		return nil, fmt.Errorf("apply control value: %w", err)
 	}
 
 	go c.loop()
