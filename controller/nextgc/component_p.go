@@ -9,18 +9,49 @@ package nextgc
 import (
 	"fmt"
 	"math"
-	"sync"
 
 	"github.com/go-logr/logr"
+	"github.com/newcloudtechnologies/memlimiter/utils"
 )
 
 // The proportional component of the controller.
 type componentP struct {
-	valueSmoother *emaSmoother
-	cfg           *ComponentProportionalConfig
-	logger        logr.Logger
+	// valueSmoother is a smoother for the raw proportional signal.
+	valueSmoother *utils.EMASmoother
+	// cfg is the configuration for the proportional component.
+	cfg *ComponentProportionalConfig
+	// logger is the logger for the proportional component.
+	logger logr.Logger
 }
 
+// newComponentP creates a new proportional component.
+func newComponentP(logger logr.Logger, cfg *ComponentProportionalConfig) *componentP {
+	out := &componentP{
+		logger: logger,
+		cfg:    cfg,
+	}
+
+	if cfg.WindowSize != 0 {
+		// We smooth the raw proportional signal because memory usage is noisy:
+		// short spikes should not immediately trigger aggressive control actions.
+		//
+		// EMA formula:
+		//   S_t = alpha*X_t + (1-alpha)*S_{t-1}
+		//
+		// To approximate a simple moving average window of size N, we use:
+		//   alpha = 2 / (N + 1)
+		//
+		// Larger window -> smaller alpha -> smoother but slower reaction.
+		//nolint:gomnd
+		alpha := 2 / (float64(cfg.WindowSize + 1))
+
+		out.valueSmoother = utils.NewEMASmoother(alpha)
+	}
+
+	return out
+}
+
+// value returns the proportional component's output.
 func (c *componentP) value(utilization float64) (float64, error) {
 	if c.valueSmoother != nil {
 		valueEMA, err := c.valueEMA(utilization)
@@ -39,6 +70,7 @@ func (c *componentP) value(utilization float64) (float64, error) {
 	return valueRaw, nil
 }
 
+// valueRaw returns the raw proportional component's output.
 func (c *componentP) valueRaw(utilization float64) (float64, error) {
 	if utilization < 0 {
 		return math.NaN(), fmt.Errorf("value is undefined if memory usage = %v", utilization)
@@ -62,6 +94,7 @@ func (c *componentP) valueRaw(utilization float64) (float64, error) {
 	return c.cfg.Coefficient * (1 / (1 - utilization)), nil
 }
 
+// valueEMA returns the exponential moving average of the raw proportional component's output.
 func (c *componentP) valueEMA(utilization float64) (float64, error) {
 	valueRaw, err := c.valueRaw(utilization)
 	if err != nil {
@@ -69,51 +102,4 @@ func (c *componentP) valueEMA(utilization float64) (float64, error) {
 	}
 
 	return c.valueSmoother.Update(valueRaw), nil
-}
-
-func newComponentP(logger logr.Logger, cfg *ComponentProportionalConfig) *componentP {
-	out := &componentP{
-		logger: logger,
-		cfg:    cfg,
-	}
-
-	if cfg.WindowSize != 0 {
-		// alpha is a smoothing coefficient describing the degree of weighting decrease;
-		// the lesser the alpha is, the higher the impact of the elder historical values on the resulting value.
-		// alpha is choosed empirically, but can depend on a window size, like here:
-		// https://en.wikipedia.org/wiki/Moving_average#Relationship_between_SMA_and_EMA
-		//nolint:gomnd
-		alpha := 2 / (float64(cfg.WindowSize + 1))
-
-		out.valueSmoother = newEMASmoother(alpha)
-	}
-
-	return out
-}
-
-type emaSmoother struct {
-	mu          sync.Mutex
-	alpha       float64
-	initialized bool
-	value       float64
-}
-
-func newEMASmoother(alpha float64) *emaSmoother {
-	return &emaSmoother{alpha: alpha}
-}
-
-func (e *emaSmoother) Update(v float64) float64 {
-	e.mu.Lock()
-	defer e.mu.Unlock()
-
-	if !e.initialized {
-		e.value = v
-		e.initialized = true
-
-		return e.value
-	}
-
-	e.value = e.alpha*v + (1-e.alpha)*e.value
-
-	return e.value
 }
