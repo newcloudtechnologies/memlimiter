@@ -7,6 +7,9 @@
 package memlimiter
 
 import (
+	"errors"
+	"fmt"
+
 	"github.com/go-logr/logr"
 	"github.com/newcloudtechnologies/memlimiter/backpressure"
 	"github.com/newcloudtechnologies/memlimiter/controller"
@@ -14,7 +17,6 @@ import (
 	"github.com/newcloudtechnologies/memlimiter/middleware"
 	"github.com/newcloudtechnologies/memlimiter/stats"
 	"github.com/newcloudtechnologies/memlimiter/utils/config/prepare"
-	"github.com/pkg/errors"
 )
 
 var _ Service = (*serviceImpl)(nil)
@@ -32,12 +34,12 @@ func (s *serviceImpl) Middleware() middleware.Middleware { return s.middleware }
 func (s *serviceImpl) GetStats() (*stats.MemLimiterStats, error) {
 	controllerStats, err := s.controller.GetStats()
 	if err != nil {
-		return nil, errors.Wrap(err, "controller tracker")
+		return nil, fmt.Errorf("controller tracker: %w", err)
 	}
 
 	backpressureStats, err := s.backpressureOperator.GetStats()
 	if err != nil {
-		return nil, errors.Wrap(err, "backpressure tracker")
+		return nil, fmt.Errorf("backpressure tracker: %w", err)
 	}
 
 	return &stats.MemLimiterStats{
@@ -60,7 +62,7 @@ func newServiceImpl(
 	backpressureOperator backpressure.Operator,
 ) (Service, error) {
 	if err := prepare.Prepare(cfg); err != nil {
-		return nil, errors.Wrap(err, "prepare config")
+		return nil, fmt.Errorf("prepare config: %w", err)
 	}
 
 	if statsSubscription == nil {
@@ -75,9 +77,8 @@ func newServiceImpl(
 		statsSubscription,
 		backpressureOperator,
 	)
-
 	if err != nil {
-		return nil, errors.Wrap(err, "new controller from config")
+		return nil, fmt.Errorf("new controller from config: %w", err)
 	}
 
 	return &serviceImpl{

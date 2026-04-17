@@ -8,35 +8,61 @@ package perf
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/go-logr/logr"
+	"github.com/newcloudtechnologies/memlimiter/utils"
 	"github.com/newcloudtechnologies/memlimiter/utils/config/prepare"
-	"github.com/rcrowley/go-metrics"
 	"golang.org/x/time/rate"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/protobuf/types/known/durationpb"
 
 	"github.com/newcloudtechnologies/memlimiter/test/allocator/schema"
 	"github.com/newcloudtechnologies/memlimiter/utils/breaker"
-	"github.com/pkg/errors"
 )
 
 // Client - client for performance testing.
 type Client struct {
 	startTime        time.Time
 	client           schema.AllocatorClient
-	requestsInFlight metrics.Counter
+	requestsInFlight utils.Counter[int64]
 	grpcConn         *grpc.ClientConn
 	breaker          *breaker.Breaker
 	cfg              *Config
 	logger           logr.Logger
 }
 
+// NewClient creates new client for performance tests.
+func NewClient(logger logr.Logger, cfg *Config) (*Client, error) {
+	if err := prepare.Prepare(cfg); err != nil {
+		return nil, fmt.Errorf("configs prepare: %w", err)
+	}
+
+	grpcConn, err := grpc.NewClient(cfg.Endpoint, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		return nil, fmt.Errorf("dial error: %w", err)
+	}
+
+	client := schema.NewAllocatorClient(grpcConn)
+
+	return &Client{
+		grpcConn:         grpcConn,
+		logger:           logger,
+		client:           client,
+		startTime:        time.Now(),
+		cfg:              cfg,
+		requestsInFlight: utils.NewInt64Counter(nil),
+		breaker:          breaker.NewBreaker(),
+	}, nil
+}
+
 // Run starts load session.
 func (p *Client) Run() error {
-	if err := p.breaker.Inc(); err != nil {
-		return errors.Wrap(err, "breaker inc")
+	err := p.breaker.Inc()
+	if err != nil {
+		return fmt.Errorf("breaker inc: %w", err)
 	}
 
 	defer p.breaker.Dec()
@@ -49,36 +75,49 @@ func (p *Client) Run() error {
 
 	limiter := rate.NewLimiter(p.cfg.RPS, 1)
 
-	// single threaded for simplicity
+	// Single threaded for simplicity.
 	for {
-		// wait till limiter allows to fire a request
-		if err := limiter.Wait(p.breaker); err != nil {
-			return errors.Wrap(err, "limiter wait")
+		// Wait till limiter allows to fire a request.
+		err := limiter.Wait(p.breaker)
+		if err != nil {
+			return fmt.Errorf("limiter wait: %w", err)
 		}
 
-		// increment request copies
-		if err := p.breaker.Inc(); err != nil {
-			return errors.Wrap(err, "breaker inc")
+		// Increment request copies.
+		err = p.breaker.Inc()
+		if err != nil {
+			return fmt.Errorf("breaker inc: %w", err)
 		}
 
 		go p.makeRequest()
 
 		select {
 		case <-monitoringTicker.C:
-			// print progress periodically
+			// Print progress periodically.
 			p.printProgress()
 		case <-timer.C:
-			// terminate load
+			// Terminate load.
 			return nil
 		default:
 		}
 	}
 }
 
+// Quit terminates perf client gracefully.
+func (p *Client) Quit() {
+	p.breaker.ShutdownAndWait()
+
+	err := p.grpcConn.Close()
+	if err != nil {
+		p.logger.Error(err, "gprc connection close")
+	}
+}
+
+// makeRequest makes a request to the allocator server.
 func (p *Client) makeRequest() {
 	defer p.breaker.Dec()
 
-	// update in-flight request counter
+	// Update in-flight request counter.
 	p.requestsInFlight.Inc(1)
 	defer p.requestsInFlight.Dec(1)
 
@@ -99,43 +138,11 @@ func (p *Client) makeRequest() {
 	}
 }
 
+// printProgress prints the progress of the load session.
 func (p *Client) printProgress() {
 	p.logger.Info(
 		"progress",
 		"elapsed_time", time.Since(p.startTime),
 		"in_flight", p.requestsInFlight.Count(),
 	)
-}
-
-// Quit terminates perf client gracefully.
-func (p *Client) Quit() {
-	p.breaker.ShutdownAndWait()
-
-	if err := p.grpcConn.Close(); err != nil {
-		p.logger.Error(err, "gprc connection close")
-	}
-}
-
-// NewClient creates new client for performance tests.
-func NewClient(logger logr.Logger, cfg *Config) (*Client, error) {
-	if err := prepare.Prepare(cfg); err != nil {
-		return nil, errors.Wrap(err, "configs prepare")
-	}
-
-	grpcConn, err := grpc.Dial(cfg.Endpoint, grpc.WithInsecure())
-	if err != nil {
-		return nil, errors.Wrap(err, "dial error")
-	}
-
-	client := schema.NewAllocatorClient(grpcConn)
-
-	return &Client{
-		grpcConn:         grpcConn,
-		logger:           logger,
-		client:           client,
-		startTime:        time.Now(),
-		cfg:              cfg,
-		requestsInFlight: metrics.NewCounter(),
-		breaker:          breaker.NewBreaker(),
-	}, nil
 }

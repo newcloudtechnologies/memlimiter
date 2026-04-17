@@ -1,4 +1,4 @@
-FROM fedora:36
+FROM fedora:43
 
 ADD allocator /usr/local/bin
 

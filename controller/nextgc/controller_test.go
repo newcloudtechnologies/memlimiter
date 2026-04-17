@@ -110,7 +110,7 @@ func TestController(t *testing.T) {
 			return val.GOGC == 78 && val.ThrottlingPercentage == 22
 		}),
 	).Return(nil).Once().Run(
-		func(args mock.Arguments) {
+		func(_ mock.Arguments) {
 			// As soon as the control signal is delivered to the backpressure.Operator,
 			// replace the ServiceStats instance to make controller think that memory
 			// consumption returned to normal.
@@ -122,7 +122,7 @@ func TestController(t *testing.T) {
 			return val.GOGC == backpressure.DefaultGOGC && val.ThrottlingPercentage == backpressure.NoThrottling
 		}),
 	).Return(nil).Once().Run(
-		func(args mock.Arguments) {
+		func(_ mock.Arguments) {
 			close(terminateChan)
 		},
 	)

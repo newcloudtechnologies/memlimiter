@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 type testStruct struct {
@@ -22,23 +23,23 @@ func TestDuration_UnmarshalJSON(t *testing.T) {
 	var ts testStruct
 
 	data := []byte(`{ "timeout": "2ns" }`)
-	assert.NoError(t, json.Unmarshal(data, &ts))
+	require.NoError(t, json.Unmarshal(data, &ts))
 	assert.Equal(t, 2*time.Nanosecond, ts.Timeout.Duration)
 
 	data = []byte(`{ "timeout": "2ms" }`)
-	assert.NoError(t, json.Unmarshal(data, &ts))
+	require.NoError(t, json.Unmarshal(data, &ts))
 	assert.Equal(t, 2*time.Millisecond, ts.Timeout.Duration)
 
 	data = []byte(`{ "timeout": "2s" }`)
-	assert.NoError(t, json.Unmarshal(data, &ts))
+	require.NoError(t, json.Unmarshal(data, &ts))
 	assert.Equal(t, 2*time.Second, ts.Timeout.Duration)
 
 	data = []byte(`{ "timeout": "2m" }`)
-	assert.NoError(t, json.Unmarshal(data, &ts))
+	require.NoError(t, json.Unmarshal(data, &ts))
 	assert.Equal(t, 2*time.Minute, ts.Timeout.Duration)
 
 	data = []byte(`{ "timeout": "2h" }`)
-	assert.NoError(t, json.Unmarshal(data, &ts))
+	require.NoError(t, json.Unmarshal(data, &ts))
 	assert.Equal(t, 2*time.Hour, ts.Timeout.Duration)
 
 	data = []byte(`{ "timeout": "invalid" }`)
@@ -54,28 +55,28 @@ func TestDuration_MarshalJSON(t *testing.T) {
 
 	ts.Timeout = Duration{Duration: 2 * time.Nanosecond}
 	dump, err = json.Marshal(&ts)
-	assert.NoError(t, err)
-	assert.Equal(t, []byte(`{"timeout":"2ns"}`), dump)
+	require.NoError(t, err)
+	assert.JSONEq(t, `{"timeout":"2ns"}`, string(dump))
 
 	ts.Timeout = Duration{Duration: 2 * time.Millisecond}
 	dump, err = json.Marshal(&ts)
-	assert.NoError(t, err)
-	assert.Equal(t, []byte(`{"timeout":"2ms"}`), dump)
+	require.NoError(t, err)
+	assert.JSONEq(t, `{"timeout":"2ms"}`, string(dump))
 
 	ts.Timeout = Duration{Duration: 2 * time.Second}
 	dump, err = json.Marshal(&ts)
-	assert.NoError(t, err)
-	assert.Equal(t, []byte(`{"timeout":"2s"}`), dump)
+	require.NoError(t, err)
+	assert.JSONEq(t, `{"timeout":"2s"}`, string(dump))
 
 	ts.Timeout = Duration{Duration: 2 * time.Minute}
 	dump, err = json.Marshal(&ts)
-	assert.NoError(t, err)
-	assert.Equal(t, []byte(`{"timeout":"2m0s"}`), dump)
+	require.NoError(t, err)
+	assert.JSONEq(t, `{"timeout":"2m0s"}`, string(dump))
 
 	ts.Timeout = Duration{Duration: 2 * time.Hour}
 	dump, err = json.Marshal(&ts)
-	assert.NoError(t, err)
-	assert.Equal(t, []byte(`{"timeout":"2h0m0s"}`), dump)
+	require.NoError(t, err)
+	assert.JSONEq(t, `{"timeout":"2h0m0s"}`, string(dump))
 }
 
 func TestDurationByValue(t *testing.T) {
@@ -86,12 +87,12 @@ func TestDurationByValue(t *testing.T) {
 	var ms masterStructVal
 
 	data := []byte(`{"t":{"timeout":"2ns"}}`)
-	assert.NoError(t, json.Unmarshal(data, &ms))
+	require.NoError(t, json.Unmarshal(data, &ms))
 	assert.Equal(t, 2*time.Nanosecond, ms.T.Timeout.Duration)
 
 	dump, err := json.Marshal(&ms)
-	assert.NoError(t, err)
-	assert.Equal(t, []byte(`{"t":{"timeout":"2ns"}}`), dump)
+	require.NoError(t, err)
+	assert.JSONEq(t, `{"t":{"timeout":"2ns"}}`, string(dump))
 }
 
 func TestDurationByPointer(t *testing.T) {
@@ -102,18 +103,26 @@ func TestDurationByPointer(t *testing.T) {
 	var ms masterStructPtr
 
 	data := []byte(`{"t":{"timeout":"2ns"}}`)
-	assert.NoError(t, json.Unmarshal(data, &ms))
+	require.NoError(t, json.Unmarshal(data, &ms))
 	assert.Equal(t, 2*time.Nanosecond, ms.T.Timeout.Duration)
 
 	dump, err := json.Marshal(&ms)
-	assert.NoError(t, err)
-	assert.Equal(t, []byte(`{"t":{"timeout":"2ns"}}`), dump)
+	require.NoError(t, err)
+	assert.JSONEq(t, `{"t":{"timeout":"2ns"}}`, string(dump))
 }
 
 func TestDurationZeroValue(t *testing.T) {
 	var ts testStruct
 
-	data := []byte(`{"size": "0"}`)
-	assert.NoError(t, json.Unmarshal(data, &ts))
+	data := []byte(`{"timeout":"2s"}`)
+	require.NoError(t, json.Unmarshal(data, &ts))
+	assert.Equal(t, 2*time.Second, ts.Timeout.Duration)
+
+	data = []byte(`{"timeout":"0"}`)
+	require.NoError(t, json.Unmarshal(data, &ts))
+	assert.Equal(t, 0*time.Second, ts.Timeout.Duration)
+
+	data = []byte(`{"timeout":""}`)
+	require.NoError(t, json.Unmarshal(data, &ts))
 	assert.Equal(t, 0*time.Second, ts.Timeout.Duration)
 }

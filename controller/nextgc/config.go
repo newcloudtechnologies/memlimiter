@@ -7,9 +7,10 @@
 package nextgc
 
 import (
+	"errors"
+
 	"github.com/newcloudtechnologies/memlimiter/utils/config/bytes"
 	"github.com/newcloudtechnologies/memlimiter/utils/config/duration"
-	"github.com/pkg/errors"
 )
 
 // ControllerConfig - controller configuration.
@@ -43,7 +44,7 @@ func (c *ControllerConfig) Prepare() error {
 	}
 
 	if c.DangerZoneThrottling == 0 || c.DangerZoneThrottling > 100 {
-		return errors.Errorf("invalid DangerZoneThrottling value (must belong to [0; 100])")
+		return errors.New("invalid DangerZoneThrottling value (must belong to [0; 100])")
 	}
 
 	if c.Period.Duration == 0 {

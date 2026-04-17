@@ -7,6 +7,7 @@
 package integration
 
 import (
+	"fmt"
 	"testing"
 	"time"
 
@@ -21,7 +22,6 @@ import (
 	"github.com/newcloudtechnologies/memlimiter/test/allocator/tracker"
 	"github.com/newcloudtechnologies/memlimiter/utils/config/bytes"
 	"github.com/newcloudtechnologies/memlimiter/utils/config/duration"
-	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 )
 
@@ -38,7 +38,8 @@ func TestComponent(t *testing.T) {
 	defer allocatorServer.Quit()
 
 	go func() {
-		if errRun := allocatorServer.Run(); errRun != nil {
+		errRun := allocatorServer.Run()
+		if errRun != nil {
 			logger.Error(errRun, "server run")
 		}
 	}()
@@ -84,7 +85,7 @@ func makeServer(logger logr.Logger, endpoint string, rssLimit uint64) (server.Se
 
 	allocatorServer, err := server.NewServer(logger, cfg)
 	if err != nil {
-		return nil, errors.Wrap(err, "perf client")
+		return nil, fmt.Errorf("perf client: %w", err)
 	}
 
 	return allocatorServer, nil
@@ -102,7 +103,7 @@ func makePerfClient(logger logr.Logger, endpoint string) (*perf.Client, error) {
 
 	perfClient, err := perf.NewClient(logger, cfg)
 	if err != nil {
-		return nil, errors.Wrap(err, "perf client")
+		return nil, fmt.Errorf("perf client: %w", err)
 	}
 
 	return perfClient, nil

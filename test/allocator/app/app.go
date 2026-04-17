@@ -7,12 +7,12 @@
 package app
 
 import (
+	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
 
 	"github.com/go-logr/logr"
-	"github.com/pkg/errors"
 	"github.com/urfave/cli/v2"
 )
 
@@ -20,6 +20,14 @@ import (
 type App struct {
 	factory Factory
 	logger  logr.Logger
+}
+
+// NewApp prepares new application.
+func NewApp(logger logr.Logger, factory Factory) *App {
+	return &App{
+		logger:  logger,
+		factory: factory,
+	}
 }
 
 // Run launches the application.
@@ -42,7 +50,7 @@ func (a *App) Run() {
 				Action: func(context *cli.Context) error {
 					r, err := a.factory.MakeServer(context)
 					if err != nil {
-						return errors.Wrap(err, "make server")
+						return fmt.Errorf("make server: %w", err)
 					}
 
 					return runAndWaitSignal(r)
@@ -62,7 +70,7 @@ func (a *App) Run() {
 				Action: func(context *cli.Context) error {
 					r, err := a.factory.MakePerfClient(context)
 					if err != nil {
-						return errors.Wrap(err, "make perf client")
+						return fmt.Errorf("make perf client: %w", err)
 					}
 
 					return runAndWaitSignal(r)
@@ -71,7 +79,8 @@ func (a *App) Run() {
 		},
 	}
 
-	if err := app.Run(os.Args); err != nil {
+	err := app.Run(os.Args)
+	if err != nil {
 		a.logger.Error(err, "application run")
 		os.Exit(1)
 	}
@@ -89,16 +98,12 @@ func runAndWaitSignal(r Runnable) error {
 
 	select {
 	case err := <-errChan:
-		return errors.Wrap(err, "run error")
+		if err != nil {
+			return fmt.Errorf("run error: %w", err)
+		}
+
+		return nil
 	case <-signalChan:
 		return nil
-	}
-}
-
-// NewApp prepares new application.
-func NewApp(logger logr.Logger, factory Factory) *App {
-	return &App{
-		logger:  logger,
-		factory: factory,
 	}
 }

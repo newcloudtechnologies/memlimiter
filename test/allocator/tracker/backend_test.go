@@ -47,6 +47,6 @@ func TestBackend(t *testing.T) {
 	}
 
 	reportsOut, err := back.getReports()
-	require.Len(t, reportsOut, 0)
+	require.Empty(t, reportsOut)
 	require.Error(t, err)
 }

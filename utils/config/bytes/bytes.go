@@ -8,36 +8,41 @@ package bytes
 
 import (
 	"encoding/json"
-	"fmt"
 
 	"code.cloudfoundry.org/bytefmt"
 )
 
 // Bytes helps to represent human-readable size values in JSON.
 type Bytes struct {
+	// Value is the number of bytes.
 	Value uint64
 }
 
-// UnmarshalJSON - JSON deserializer.
-func (b *Bytes) UnmarshalJSON(data []byte) (err error) {
+// UnmarshalJSON parses a JSON string like "512M" into bytes.
+func (b *Bytes) UnmarshalJSON(data []byte) error {
 	var s string
 
-	if err = json.Unmarshal(data, &s); err != nil {
-		return
+	if err := json.Unmarshal(data, &s); err != nil {
+		return err
 	}
 
 	if s == "0" {
-		return
+		b.Value = 0
+
+		return nil
 	}
 
-	b.Value, err = bytefmt.ToBytes(s)
+	value, err := bytefmt.ToBytes(s)
+	if err != nil {
+		return err
+	}
 
-	return
+	b.Value = value
+
+	return nil
 }
 
-// MarshalJSON - JSON serializer.
+// MarshalJSON renders bytes as a human-readable JSON string (for example, "20M").
 func (b Bytes) MarshalJSON() ([]byte, error) {
-	str := fmt.Sprintf("\"%s\"", bytefmt.ByteSize(b.Value))
-
-	return []byte(str), nil
+	return json.Marshal(bytefmt.ByteSize(b.Value))
 }
