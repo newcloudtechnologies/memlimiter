@@ -18,16 +18,19 @@ type ServiceStatsMock struct {
 }
 
 func (m *ServiceStatsMock) RSS() uint64 {
+	//nolint:forcetypeassert // Mocked method.
 	return m.Called().Get(0).(uint64)
 }
 
 func (m *ServiceStatsMock) NextGC() uint64 {
+	//nolint:forcetypeassert // Mocked method.
 	return m.Called().Get(0).(uint64)
 }
 
 func (m *ServiceStatsMock) ConsumptionReport() *ConsumptionReport {
 	args := m.Called()
 
+	//nolint:forcetypeassert // Mocked method.
 	return args.Get(0).(*ConsumptionReport)
 }
 
@@ -35,9 +38,10 @@ var _ ServiceStatsSubscription = (*ServiceStatsSubscriptionMock)(nil)
 
 // ServiceStatsSubscriptionMock mocks ServiceStatsSubscription.
 type ServiceStatsSubscriptionMock struct {
-	ServiceStatsSubscription
-	Chan chan ServiceStats
 	mock.Mock
+	ServiceStatsSubscription
+
+	Chan chan ServiceStats
 }
 
 func (m *ServiceStatsSubscriptionMock) Updates() <-chan ServiceStats {

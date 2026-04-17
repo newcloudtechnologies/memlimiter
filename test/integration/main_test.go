@@ -38,7 +38,8 @@ func TestComponent(t *testing.T) {
 	defer allocatorServer.Quit()
 
 	go func() {
-		if errRun := allocatorServer.Run(); errRun != nil {
+		errRun := allocatorServer.Run()
+		if errRun != nil {
 			logger.Error(errRun, "server run")
 		}
 	}()

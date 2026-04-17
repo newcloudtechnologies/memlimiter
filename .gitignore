@@ -1,8 +1,10 @@
+__pycache__
 .idea
 .vscode
-test/infra/allocator/config.json
+allocator
+bin/
+coverage*out
 test/allocator/allocator
+test/infra/allocator/config.json
 test/integration/integration-test
 venv
-__pycache__
-coverage*out

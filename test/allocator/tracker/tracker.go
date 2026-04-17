@@ -25,6 +25,55 @@ type Tracker struct {
 	logger     logr.Logger
 }
 
+// NewTrackerFromConfig is a constructor of a Tracker.
+func NewTrackerFromConfig(logger logr.Logger, cfg *Config, memLimiter memlimiter.Service) (*Tracker, error) {
+	var (
+		back backend
+		err  error
+	)
+
+	switch {
+	case cfg.BackendFile != nil:
+		back, err = newBackendFile(logger, cfg.BackendFile)
+	case cfg.BackendMemory != nil:
+		back = newBackendMemory()
+	default:
+		return nil, errors.New("unexpected backend type")
+	}
+
+	if err != nil {
+		return nil, fmt.Errorf("new backend: %w", err)
+	}
+
+	tr := &Tracker{
+		backend:    back,
+		logger:     logger,
+		cfg:        cfg,
+		memLimiter: memLimiter,
+		breaker:    breaker.NewBreakerWithInitValue(1),
+	}
+
+	go tr.loop()
+
+	return tr, nil
+}
+
+// GetReports returns the accumulated reports.
+func (tr *Tracker) GetReports() ([]*Report, error) {
+	out, err := tr.backend.getReports()
+	if err != nil {
+		return nil, fmt.Errorf("backend get reports: %w", err)
+	}
+
+	return out, nil
+}
+
+// Quit gracefully terminates tracker.
+func (tr *Tracker) Quit() {
+	tr.breaker.ShutdownAndWait()
+	tr.backend.quit()
+}
+
 func (tr *Tracker) makeReport() (*Report, error) {
 	out := &Report{}
 
@@ -70,60 +119,12 @@ func (tr *Tracker) loop() {
 	for {
 		select {
 		case <-ticker.C:
-			if err := tr.dumpReport(); err != nil {
+			err := tr.dumpReport()
+			if err != nil {
 				tr.logger.Error(err, "dump Report")
 			}
 		case <-tr.breaker.Done():
 			return
 		}
 	}
-}
-
-// GetReports returns the accumulated reports.
-func (tr *Tracker) GetReports() ([]*Report, error) {
-	out, err := tr.backend.getReports()
-	if err != nil {
-		return nil, fmt.Errorf("backend get reports: %w", err)
-	}
-
-	return out, nil
-}
-
-// Quit gracefully terminates tracker.
-func (tr *Tracker) Quit() {
-	tr.breaker.ShutdownAndWait()
-	tr.backend.quit()
-}
-
-// NewTrackerFromConfig is a constructor of a Tracker.
-func NewTrackerFromConfig(logger logr.Logger, cfg *Config, memLimiter memlimiter.Service) (*Tracker, error) {
-	var (
-		back backend
-		err  error
-	)
-
-	switch {
-	case cfg.BackendFile != nil:
-		back, err = newBackendFile(logger, cfg.BackendFile)
-	case cfg.BackendMemory != nil:
-		back = newBackendMemory()
-	default:
-		return nil, errors.New("unexpected backend type")
-	}
-
-	if err != nil {
-		return nil, fmt.Errorf("new backend: %w", err)
-	}
-
-	tr := &Tracker{
-		backend:    back,
-		logger:     logger,
-		cfg:        cfg,
-		memLimiter: memLimiter,
-		breaker:    breaker.NewBreakerWithInitValue(1),
-	}
-
-	go tr.loop()
-
-	return tr, nil
 }

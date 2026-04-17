@@ -6,21 +6,22 @@ option go_package = "gitlab.stageoffice.ru/UCS-COMMON/memlimiter/test/allocator/
 
 import "google/protobuf/duration.proto";
 
-// Allocator - тестовый сервис, который просто делает аллокации во время обработки запроса
+// Allocator service is a test service that simply makes allocations during request processing.
 service Allocator {
+    // MakeAllocation makes an allocation.
     rpc MakeAllocation (MakeAllocationRequest) returns (MakeAllocationResponse) {}
 }
 
-// MakeAllocationRequest - запрос на аллокацию
+// MakeAllocationRequest is a request to make an allocation.
 message MakeAllocationRequest {
-    // size - размер аллокации
+    // size is the size of the allocation.
     uint64 size = 1;
-    // duration - продолжительность времени, на которое надо заблокировать запрос после аллокации
+    // duration is the duration of the allocation.
     google.protobuf.Duration duration = 2;
 }
 
-// MakeAllocationResponse - ответ на запрос на аллокацию
+// MakeAllocationResponse is a response to a request to make an allocation.
 message MakeAllocationResponse {
-    // value - просто некоторое значение
+    // value is a simple value.
     uint64 value = 1;
 }

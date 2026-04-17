@@ -22,12 +22,12 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-// MakeAllocationRequest - запрос на аллокацию
+// MakeAllocationRequest is a request to make an allocation.
 type MakeAllocationRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// size - размер аллокации
+	// size is the size of the allocation.
 	Size uint64 `protobuf:"varint,1,opt,name=size,proto3" json:"size,omitempty"`
-	// duration - продолжительность времени, на которое надо заблокировать запрос после аллокации
+	// duration is the duration of the allocation.
 	Duration      *durationpb.Duration `protobuf:"bytes,2,opt,name=duration,proto3" json:"duration,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -77,10 +77,10 @@ func (x *MakeAllocationRequest) GetDuration() *durationpb.Duration {
 	return nil
 }
 
-// MakeAllocationResponse - ответ на запрос на аллокацию
+// MakeAllocationResponse is a response to a request to make an allocation.
 type MakeAllocationResponse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// value - просто некоторое значение
+	// value is a simple value.
 	Value         uint64 `protobuf:"varint,1,opt,name=value,proto3" json:"value,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache

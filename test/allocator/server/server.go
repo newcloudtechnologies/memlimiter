@@ -9,7 +9,8 @@ package server
 import (
 	"context"
 	"fmt"
-	"math/rand"
+	"math"
+	"math/rand/v2"
 	"net"
 	"time"
 
@@ -21,25 +22,27 @@ import (
 	"google.golang.org/grpc"
 )
 
-// Server represents Allocator service interface.
+// Server is the interface for the Allocator service.
 type Server interface {
 	schema.AllocatorServer
-	// Run starts service (a blocking call).
+	// Run starts the server (a blocking call).
 	Run() error
-	// Quit terminates service gracefully.
+	// Quit terminates the server gracefully.
 	Quit()
-	// GRPCServer returns underlying server implementation. Only for testing purposes.
+	// GRPCServer returns the underlying server implementation. Only for testing purposes.
 	GRPCServer() *grpc.Server
-	// MemLimiter returns internal MemLimiter object. Only for testing purposes.
+	// MemLimiter returns the internal MemLimiter object. Only for testing purposes.
 	MemLimiter() memlimiter.Service
-	// Tracker returns statistics tracker. Only for testing purposes.
+	// Tracker returns the statistics tracker. Only for testing purposes.
 	Tracker() *tracker.Tracker
 }
 
 var _ Server = (*serverImpl)(nil)
 
+// serverImpl is the implementation of the Server interface.
 type serverImpl struct {
 	schema.UnimplementedAllocatorServer
+
 	memLimiter memlimiter.Service
 	tracker    *tracker.Tracker
 	cfg        *Config
@@ -47,64 +50,7 @@ type serverImpl struct {
 	logger     logr.Logger
 }
 
-func (srv *serverImpl) MakeAllocation(_ context.Context, request *schema.MakeAllocationRequest) (*schema.MakeAllocationResponse, error) {
-	var slice []byte
-
-	// allocate slice
-	if request.Size != 0 {
-		slice = make([]byte, int(request.Size))
-		//nolint:gosec
-		if _, err := rand.Read(slice); err != nil {
-			return nil, fmt.Errorf("rand read: %w", err)
-		}
-	}
-
-	// Wait some time to make slice reside in the RSS (otherwise it could be immediately collected by GC).
-	// This is a trivial imitation of a real-world service business logic.
-	duration := request.Duration.AsDuration()
-	if duration != 0 {
-		time.Sleep(duration)
-	}
-
-	// Imitate some work with slice to prevent compiler from optimizing out the slice.
-	x := uint64(0)
-	for i := 0; i < len(slice); i++ {
-		x += uint64(slice[i])
-	}
-
-	return &schema.MakeAllocationResponse{Value: x}, nil
-}
-
-func (srv *serverImpl) Run() error {
-	endpoint := srv.cfg.ListenEndpoint
-
-	listener, err := net.Listen("tcp", endpoint)
-	if err != nil {
-		return fmt.Errorf("net listen: %w", err)
-	}
-
-	srv.logger.Info("starting listening", "endpoint", endpoint)
-
-	if err = srv.grpcServer.Serve(listener); err != nil {
-		return fmt.Errorf("grpc server serve: %w", err)
-	}
-
-	return nil
-}
-
-func (srv *serverImpl) GRPCServer() *grpc.Server { return srv.grpcServer }
-
-func (srv *serverImpl) MemLimiter() memlimiter.Service { return srv.memLimiter }
-
-func (srv *serverImpl) Tracker() *tracker.Tracker { return srv.tracker }
-
-func (srv *serverImpl) Quit() {
-	srv.logger.Info("terminating server")
-	srv.grpcServer.Stop()
-	srv.memLimiter.Quit()
-}
-
-// NewServer - server constructor.
+// NewServer constructs a new server.
 func NewServer(logger logr.Logger, cfg *Config, options ...grpc.ServerOption) (Server, error) {
 	if err := prepare.Prepare(cfg); err != nil {
 		return nil, fmt.Errorf("configs prepare: %w", err)
@@ -138,4 +84,74 @@ func NewServer(logger logr.Logger, cfg *Config, options ...grpc.ServerOption) (S
 	schema.RegisterAllocatorServer(srv.grpcServer, srv)
 
 	return srv, nil
+}
+
+// MakeAllocation makes an allocation.
+func (srv *serverImpl) MakeAllocation(_ context.Context, request *schema.MakeAllocationRequest) (*schema.MakeAllocationResponse, error) {
+	var slice []byte
+
+	// Allocate slice.
+	allocationSize := request.GetSize()
+	if allocationSize != 0 {
+		if allocationSize > uint64(math.MaxInt) {
+			return nil, fmt.Errorf("allocation size is too large: %d", allocationSize)
+		}
+
+		slice = make([]byte, int(allocationSize))
+		//nolint:gosec // Non-cryptographic RNG is enough for load-testing payload generation.
+		for i := range slice {
+			slice[i] = byte(rand.Uint64())
+		}
+	}
+
+	// Wait some time to make slice reside in the RSS (otherwise it could be immediately collected by GC).
+	// This is a trivial imitation of a real-world service business logic.
+	duration := request.GetDuration().AsDuration()
+	if duration != 0 {
+		time.Sleep(duration)
+	}
+
+	// Imitate some work with slice to prevent compiler from optimizing out the slice.
+	var x uint64
+	for i := range slice {
+		x += uint64(slice[i])
+	}
+
+	return &schema.MakeAllocationResponse{Value: x}, nil
+}
+
+// Run starts the server.
+func (srv *serverImpl) Run() error {
+	endpoint := srv.cfg.ListenEndpoint
+
+	listenConfig := net.ListenConfig{}
+
+	listener, err := listenConfig.Listen(context.Background(), "tcp", endpoint)
+	if err != nil {
+		return fmt.Errorf("net listen: %w", err)
+	}
+
+	srv.logger.Info("starting listening", "endpoint", endpoint)
+
+	if err = srv.grpcServer.Serve(listener); err != nil {
+		return fmt.Errorf("grpc server serve: %w", err)
+	}
+
+	return nil
+}
+
+// GRPCServer returns the underlying server implementation.
+func (srv *serverImpl) GRPCServer() *grpc.Server { return srv.grpcServer }
+
+// MemLimiter returns the internal MemLimiter object.
+func (srv *serverImpl) MemLimiter() memlimiter.Service { return srv.memLimiter }
+
+// Tracker returns the statistics tracker.
+func (srv *serverImpl) Tracker() *tracker.Tracker { return srv.tracker }
+
+// Quit terminates the server gracefully.
+func (srv *serverImpl) Quit() {
+	srv.logger.Info("terminating server")
+	srv.grpcServer.Stop()
+	srv.memLimiter.Quit()
 }

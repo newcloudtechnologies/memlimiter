@@ -8,6 +8,7 @@ package stats
 
 import (
 	"fmt"
+	"math"
 	"os"
 	"runtime"
 	"time"
@@ -33,7 +34,6 @@ type subscriptionDefault struct {
 	breaker *breaker.Breaker
 	logger  logr.Logger
 	period  time.Duration
-	pid     int32
 }
 
 func (s *subscriptionDefault) Updates() <-chan ServiceStats { return s.outChan }
@@ -46,7 +46,12 @@ func (s *subscriptionDefault) makeServiceStats() (ServiceStats, error) {
 	ms := &runtime.MemStats{}
 	runtime.ReadMemStats(ms)
 
-	pr, err := process.NewProcess(s.pid)
+	pid, err := getCurrentPID()
+	if err != nil {
+		return nil, fmt.Errorf("get current pid: %w", err)
+	}
+
+	pr, err := process.NewProcess(pid)
 	if err != nil {
 		return nil, fmt.Errorf("new pr: %w", err)
 	}
@@ -62,13 +67,21 @@ func (s *subscriptionDefault) makeServiceStats() (ServiceStats, error) {
 	}, nil
 }
 
+func getCurrentPID() (int32, error) {
+	pid := os.Getpid()
+	if pid < 0 || pid > math.MaxInt32 {
+		return 0, fmt.Errorf("pid is out of int32 range: %d", pid)
+	}
+
+	return int32(pid), nil
+}
+
 // NewSubscriptionDefault - default implementation of service tracker subscription.
 func NewSubscriptionDefault(logger logr.Logger, period time.Duration) ServiceStatsSubscription {
 	ss := &subscriptionDefault{
 		outChan: make(chan ServiceStats),
 		period:  period,
 		breaker: breaker.NewBreakerWithInitValue(1),
-		pid:     int32(os.Getpid()),
 		logger:  logger,
 	}
 

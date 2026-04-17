@@ -34,8 +34,8 @@ func TestThrottler(t *testing.T) {
 			wg := &sync.WaitGroup{}
 			wg.Add(requests)
 
-			failed := utils.NewCounter(nil)
-			succeeded := utils.NewCounter(nil)
+			failed := utils.NewUint64Counter(nil)
+			succeeded := utils.NewUint64Counter(nil)
 
 			for range requests {
 				go func() {
@@ -53,7 +53,7 @@ func TestThrottler(t *testing.T) {
 			wg.Wait()
 
 			total := failed.Count() + succeeded.Count()
-			require.Equal(t, int64(requests), total)
+			require.Equal(t, uint64(requests), total)
 
 			failedShareExpected := float64(throttlingLevel) / float64(100)
 			failedShareActual := float64(failed.Count()) / float64(total)
@@ -69,14 +69,14 @@ func TestThrottler(t *testing.T) {
 				failedShareExpected,
 				failedShareActual,
 				0.055,
-				fmt.Sprintf("expected = %v, actual = %v", failedShareExpected, failedShareActual),
+				"expected = %v, actual = %v", failedShareExpected, failedShareActual,
 			)
 			require.InDelta(
 				t,
 				succeededShareExpected,
 				succeededShareActual,
 				0.055,
-				fmt.Sprintf("expected = %v, actual = %v", succeededShareExpected, succeededShareActual),
+				"expected = %v, actual = %v", succeededShareExpected, succeededShareActual,
 			)
 
 			// Check internal counters.
@@ -103,7 +103,6 @@ func BenchmarkThrottler(b *testing.B) {
 	const requests = 1000
 
 	for _, throttlingLevel := range []uint32{0, 50, 100} {
-
 		b.Run(fmt.Sprintf("throttling level = %v", throttlingLevel), func(b *testing.B) {
 			th := newThrottler()
 
@@ -114,19 +113,18 @@ func BenchmarkThrottler(b *testing.B) {
 
 			var allowed bool
 
-			for k := 0; k < b.N; k++ {
+			for range b.N {
 				wg := &sync.WaitGroup{}
 
 				b.StartTimer()
 
 				for range requests {
-
 					wg.Go(func() {
-
 						// assign result to fictive variable to disallow compiler to optimize out function call
 						allowed = th.AllowRequest()
 					})
 				}
+
 				wg.Wait()
 
 				b.StopTimer()

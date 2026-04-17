@@ -24,8 +24,6 @@ import (
 // described in control theory. But currently it has only proportional (P) component, and the proportionality
 // is non-linear (see component_p.go). It looks like integral (I) component will never be implemented.
 // But the differential controller (D) still may be implemented in future if we face self-oscillation.
-//
-//nolint:govet
 type controllerImpl struct {
 	input  stats.ServiceStatsSubscription // input: service tracker subscription.
 	output backpressure.Operator          // output: write control parameters here
@@ -50,14 +48,46 @@ type controllerImpl struct {
 	breaker *breaker.Breaker
 }
 
+// getStatsRequest is a request to get the controller stats.
 type getStatsRequest struct {
 	result chan *stats.ControllerStats
 }
 
-func (r *getStatsRequest) respondWith(resp *stats.ControllerStats) {
-	r.result <- resp
+// NewControllerFromConfig builds new controller.
+func NewControllerFromConfig(
+	logger logr.Logger,
+	cfg *ControllerConfig,
+	serviceStatsSubscription stats.ServiceStatsSubscription,
+	backpressureOperator backpressure.Operator,
+) (controller.Controller, error) {
+	c := &controllerImpl{
+		input:      serviceStatsSubscription,
+		output:     backpressureOperator,
+		componentP: newComponentP(logger, cfg.ComponentProportional),
+		pValue:     0,
+		sumValue:   0,
+		controlParameters: &stats.ControlParameters{
+			GOGC:                 backpressure.DefaultGOGC,
+			ThrottlingPercentage: backpressure.NoThrottling,
+		},
+		getStatsChan: make(chan *getStatsRequest),
+		cfg:          cfg,
+		logger:       logger,
+		breaker:      breaker.NewBreakerWithInitValue(1),
+	}
+
+	// initialize backpressure operator with default control signal
+	err := c.applyControlValue()
+	if err != nil {
+		return nil, fmt.Errorf("apply control value: %w", err)
+	}
+
+	go c.loop()
+
+	return c, nil
 }
 
+// GetStats returns the current controller stats.
 func (c *controllerImpl) GetStats() (*stats.ControllerStats, error) {
 	req := &getStatsRequest{result: make(chan *stats.ControllerStats, 1)}
 
@@ -75,6 +105,17 @@ func (c *controllerImpl) GetStats() (*stats.ControllerStats, error) {
 	}
 }
 
+// Quit gracefully stops the controller.
+func (c *controllerImpl) Quit() {
+	c.breaker.ShutdownAndWait()
+}
+
+// respondWith responds with the controller stats.
+func (r *getStatsRequest) respondWith(resp *stats.ControllerStats) {
+	r.result <- resp
+}
+
+// loop is the main loop of the controller.
 func (c *controllerImpl) loop() {
 	defer c.breaker.Dec()
 
@@ -85,12 +126,14 @@ func (c *controllerImpl) loop() {
 		select {
 		case serviceStats := <-c.input.Updates():
 			// Update controller state every time we receive the actual tracker about the process.
-			if err := c.updateState(serviceStats); err != nil {
+			err := c.updateState(serviceStats)
+			if err != nil {
 				c.logger.Error(err, "update state")
 			}
 		case <-ticker.C:
 			// Generate control parameters based on the most recent state and send it to the backpressure operator.
-			if err := c.applyControlValue(); err != nil {
+			err := c.applyControlValue()
+			if err != nil {
 				c.logger.Error(err, "apply control value")
 			}
 		case req := <-c.getStatsChan:
@@ -101,13 +144,15 @@ func (c *controllerImpl) loop() {
 	}
 }
 
+// updateState updates the controller state.
 func (c *controllerImpl) updateState(serviceStats stats.ServiceStats) error {
 	// Extract the latest report on special memory consumers if there are any.
 	c.consumptionReport = serviceStats.ConsumptionReport()
 
 	c.updateUtilization(serviceStats)
 
-	if err := c.updateControlValues(); err != nil {
+	err := c.updateControlValues()
+	if err != nil {
 		return fmt.Errorf("update control values: %w", err)
 	}
 
@@ -116,6 +161,7 @@ func (c *controllerImpl) updateState(serviceStats stats.ServiceStats) error {
 	return nil
 }
 
+// updateUtilization updates the controller utilization.
 func (c *controllerImpl) updateUtilization(serviceStats stats.ServiceStats) {
 	// The process memory (roughly) consists of two main parts:
 	// 1. Allocations managed by Go runtime.
@@ -144,6 +190,7 @@ func (c *controllerImpl) updateUtilization(serviceStats stats.ServiceStats) {
 	c.rss = serviceStats.RSS()
 }
 
+// updateControlValues updates the controller control values.
 func (c *controllerImpl) updateControlValues() error {
 	var err error
 
@@ -169,6 +216,7 @@ func (c *controllerImpl) updateControlValues() error {
 	return nil
 }
 
+// updateControlParameters updates the controller control parameters.
 func (c *controllerImpl) updateControlParameters() {
 	c.controlParameters = &stats.ControlParameters{}
 	c.updateControlParameterGOGC()
@@ -179,6 +227,7 @@ func (c *controllerImpl) updateControlParameters() {
 
 const percents = 100
 
+// updateControlParameterGOGC updates the controller control parameter GOGC.
 func (c *controllerImpl) updateControlParameterGOGC() {
 	// Control parameters are set to defaults in the "green zone".
 	if uint32(c.utilization*percents) < c.cfg.DangerZoneGOGC {
@@ -192,6 +241,7 @@ func (c *controllerImpl) updateControlParameterGOGC() {
 	c.controlParameters.GOGC = int(backpressure.DefaultGOGC - roundedValue)
 }
 
+// updateControlParameterThrottling updates the controller control parameter throttling.
 func (c *controllerImpl) updateControlParameterThrottling() {
 	// Disable throttling in the "green zone".
 	if uint32(c.utilization*percents) < c.cfg.DangerZoneThrottling {
@@ -205,14 +255,17 @@ func (c *controllerImpl) updateControlParameterThrottling() {
 	c.controlParameters.ThrottlingPercentage = roundedValue
 }
 
+// applyControlValue applies the controller control value.
 func (c *controllerImpl) applyControlValue() error {
-	if err := c.output.SetControlParameters(c.controlParameters); err != nil {
+	err := c.output.SetControlParameters(c.controlParameters)
+	if err != nil {
 		return fmt.Errorf("set control parameters: %v: %w", c.controlParameters, err)
 	}
 
 	return nil
 }
 
+// aggregateStats aggregates the controller stats.
 func (c *controllerImpl) aggregateStats() *stats.ControllerStats {
 	res := &stats.ControllerStats{
 		MemoryBudget: &stats.MemoryBudgetStats{
@@ -234,42 +287,4 @@ func (c *controllerImpl) aggregateStats() *stats.ControllerStats {
 	}
 
 	return res
-}
-
-// Quit gracefully stops the controller.
-func (c *controllerImpl) Quit() {
-	c.breaker.ShutdownAndWait()
-}
-
-// NewControllerFromConfig builds new controller.
-func NewControllerFromConfig(
-	logger logr.Logger,
-	cfg *ControllerConfig,
-	serviceStatsSubscription stats.ServiceStatsSubscription,
-	backpressureOperator backpressure.Operator,
-) (controller.Controller, error) {
-	c := &controllerImpl{
-		input:      serviceStatsSubscription,
-		output:     backpressureOperator,
-		componentP: newComponentP(logger, cfg.ComponentProportional),
-		pValue:     0,
-		sumValue:   0,
-		controlParameters: &stats.ControlParameters{
-			GOGC:                 backpressure.DefaultGOGC,
-			ThrottlingPercentage: backpressure.NoThrottling,
-		},
-		getStatsChan: make(chan *getStatsRequest),
-		cfg:          cfg,
-		logger:       logger,
-		breaker:      breaker.NewBreakerWithInitValue(1),
-	}
-
-	// initialize backpressure operator with default control signal
-	if err := c.applyControlValue(); err != nil {
-		return nil, fmt.Errorf("apply control value: %w", err)
-	}
-
-	go c.loop()
-
-	return c, nil
 }

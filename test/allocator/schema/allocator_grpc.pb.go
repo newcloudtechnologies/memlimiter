@@ -26,8 +26,9 @@ const (
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 //
-// Allocator - тестовый сервис, который просто делает аллокации во время обработки запроса
+// Allocator service is a test service that simply makes allocations during request processing.
 type AllocatorClient interface {
+	// MakeAllocation makes an allocation.
 	MakeAllocation(ctx context.Context, in *MakeAllocationRequest, opts ...grpc.CallOption) (*MakeAllocationResponse, error)
 }
 
@@ -53,8 +54,9 @@ func (c *allocatorClient) MakeAllocation(ctx context.Context, in *MakeAllocation
 // All implementations must embed UnimplementedAllocatorServer
 // for forward compatibility.
 //
-// Allocator - тестовый сервис, который просто делает аллокации во время обработки запроса
+// Allocator service is a test service that simply makes allocations during request processing.
 type AllocatorServer interface {
+	// MakeAllocation makes an allocation.
 	MakeAllocation(context.Context, *MakeAllocationRequest) (*MakeAllocationResponse, error)
 	mustEmbedUnimplementedAllocatorServer()
 }

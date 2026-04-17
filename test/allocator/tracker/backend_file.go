@@ -24,13 +24,15 @@ type backendFile struct {
 }
 
 func (b *backendFile) saveReport(r *Report) error {
-	if err := b.writer.Write(r.toCsv()); err != nil {
+	err := b.writer.Write(r.toCsv())
+	if err != nil {
 		return fmt.Errorf("csv write: %w", err)
 	}
 
 	b.writer.Flush()
 
-	if err := b.writer.Error(); err != nil {
+	err = b.writer.Error()
+	if err != nil {
 		return fmt.Errorf("csv flush: %w", err)
 	}
 
@@ -42,7 +44,8 @@ func (b *backendFile) getReports() ([]*Report, error) {
 }
 
 func (b *backendFile) quit() {
-	if err := b.fd.Close(); err != nil {
+	err := b.fd.Close()
+	if err != nil {
 		b.logger.Error(err, "close file")
 	}
 }

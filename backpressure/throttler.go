@@ -20,11 +20,11 @@ import (
 // It is safe for concurrent use.
 type throttler struct {
 	// requestsTotal is the total number of requests.
-	requestsTotal utils.Counter
+	requestsTotal utils.Counter[uint64]
 	// requestsPassed is the number of requests that were passed.
-	requestsPassed utils.Counter
+	requestsPassed utils.Counter[uint64]
 	// requestsThrottled is the number of requests that were throttled.
-	requestsThrottled utils.Counter
+	requestsThrottled utils.Counter[uint64]
 	// threshold is the percentage of requests that should be throttled.
 	// It must be in the range [0; 100].
 	threshold atomic.Uint32
@@ -32,12 +32,12 @@ type throttler struct {
 
 // newThrottler creates a new throttler.
 func newThrottler() *throttler {
-	requestsTotal := utils.NewCounter(nil)
+	requestsTotal := utils.NewUint64Counter(nil)
 
 	return &throttler{
 		requestsTotal:     requestsTotal,
-		requestsPassed:    utils.NewCounter(requestsTotal),
-		requestsThrottled: utils.NewCounter(requestsTotal),
+		requestsPassed:    utils.NewUint64Counter(requestsTotal),
+		requestsThrottled: utils.NewUint64Counter(requestsTotal),
 	}
 }
 
@@ -57,6 +57,7 @@ func (t *throttler) AllowRequest() bool {
 	// Otherwise, allow the request.
 	// math/rand/v2 top-level functions are safe for concurrent use and provide
 	// non-cryptographic uniformly distributed values, which is enough here.
+	//nolint:gosec // Non-cryptographic RNG is intentional for probabilistic throttling decisions.
 	value := rand.Uint32N(FullThrottling)
 
 	allowed := value >= threshold
@@ -84,8 +85,8 @@ func (t *throttler) setThreshold(value uint32) error {
 // getStats returns the statistics of the throttler.
 func (t *throttler) getStats() *stats.ThrottlingStats {
 	return &stats.ThrottlingStats{
-		Total:     uint64(t.requestsTotal.Count()),
-		Passed:    uint64(t.requestsPassed.Count()),
-		Throttled: uint64(t.requestsThrottled.Count()),
+		Total:     t.requestsTotal.Count(),
+		Passed:    t.requestsPassed.Count(),
+		Throttled: t.requestsThrottled.Count(),
 	}
 }

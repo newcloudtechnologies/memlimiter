@@ -44,5 +44,5 @@ func (d *Duration) UnmarshalJSON(data []byte) error {
 
 // MarshalJSON renders duration as a human-readable JSON string (for example, "2s").
 func (d Duration) MarshalJSON() ([]byte, error) {
-	return json.Marshal(d.Duration.String())
+	return json.Marshal(d.String())
 }

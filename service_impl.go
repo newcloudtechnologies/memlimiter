@@ -77,7 +77,6 @@ func newServiceImpl(
 		statsSubscription,
 		backpressureOperator,
 	)
-
 	if err != nil {
 		return nil, fmt.Errorf("new controller from config: %w", err)
 	}

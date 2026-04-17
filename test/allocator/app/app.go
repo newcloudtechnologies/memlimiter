@@ -22,6 +22,14 @@ type App struct {
 	logger  logr.Logger
 }
 
+// NewApp prepares new application.
+func NewApp(logger logr.Logger, factory Factory) *App {
+	return &App{
+		logger:  logger,
+		factory: factory,
+	}
+}
+
 // Run launches the application.
 func (a *App) Run() {
 	app := &cli.App{
@@ -71,7 +79,8 @@ func (a *App) Run() {
 		},
 	}
 
-	if err := app.Run(os.Args); err != nil {
+	err := app.Run(os.Args)
+	if err != nil {
 		a.logger.Error(err, "application run")
 		os.Exit(1)
 	}
@@ -96,13 +105,5 @@ func runAndWaitSignal(r Runnable) error {
 		return nil
 	case <-signalChan:
 		return nil
-	}
-}
-
-// NewApp prepares new application.
-func NewApp(logger logr.Logger, factory Factory) *App {
-	return &App{
-		logger:  logger,
-		factory: factory,
 	}
 }

@@ -34,7 +34,9 @@ func TestConfigBackendFile_Prepare(t *testing.T) {
 			c := &ConfigBackendFile{
 				Path: tt.fields.Path,
 			}
-			if err := c.Prepare(); (err != nil) != tt.wantErr {
+
+			err := c.Prepare()
+			if (err != nil) != tt.wantErr {
 				t.Errorf("Prepare() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
@@ -83,7 +85,9 @@ func TestConfig_Prepare(t *testing.T) {
 				BackendMemory: tt.fields.BackendMemory,
 				Period:        tt.fields.Period,
 			}
-			if err := c.Prepare(); (err != nil) != tt.wantErr {
+
+			err := c.Prepare()
+			if (err != nil) != tt.wantErr {
 				t.Errorf("Prepare() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})

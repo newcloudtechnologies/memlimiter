@@ -36,44 +36,67 @@ func traverse(v reflect.Value, preparedByParent bool) error {
 		return nil
 	}
 
+	//nolint:exhaustive // reflect.Kind handling is intentionally grouped, default covers all other kinds.
 	switch v.Kind() {
 	case reflect.Interface, reflect.Pointer:
-		if v.IsNil() {
-			return nil
-		}
-
-		if err := tryPrepareValue(v); err != nil {
-			return err
-		}
-
-		return traverse(v.Elem(), true)
+		return traversePointerOrInterface(v)
 	case reflect.Struct:
-		if !preparedByParent {
-			if err := tryPrepareValue(v); err != nil {
-				return err
-			}
-		}
-
-		structType := v.Type()
-		for j := 0; j < v.NumField(); j++ {
-			if err := traverse(v.Field(j), false); err != nil {
-				tagValue := structType.Field(j).Tag.Get(tagName)
-				if idx := strings.Index(tagValue, ","); idx >= 0 {
-					tagValue = tagValue[:idx]
-				}
-
-				if tagValue == "" {
-					tagValue = structType.Field(j).Name
-				}
-
-				return fmt.Errorf("invalid section '%s': %w", tagValue, err)
-			}
-		}
-
-		return nil
+		return traverseStruct(v, preparedByParent)
 	default:
 		return tryPrepareValue(v)
 	}
+}
+
+// traversePointerOrInterface traverses a pointer or an interface.
+func traversePointerOrInterface(v reflect.Value) error {
+	if v.IsNil() {
+		return nil
+	}
+
+	err := tryPrepareValue(v)
+	if err != nil {
+		return err
+	}
+
+	return traverse(v.Elem(), true)
+}
+
+// traverseStruct traverses a struct.
+func traverseStruct(v reflect.Value, preparedByParent bool) error {
+	if !preparedByParent {
+		err := tryPrepareValue(v)
+		if err != nil {
+			return err
+		}
+	}
+
+	structType := v.Type()
+
+	numFields := v.NumField()
+	for j := range numFields {
+		err := traverse(v.Field(j), false)
+		if err != nil {
+			field := structType.Field(j)
+
+			return fmt.Errorf("invalid section '%s': %w", fieldTagOrName(&field), err)
+		}
+	}
+
+	return nil
+}
+
+// fieldTagOrName returns the tag value or the field name.
+func fieldTagOrName(field *reflect.StructField) string {
+	tagValue := field.Tag.Get(tagName)
+	if idx := strings.Index(tagValue, ","); idx >= 0 {
+		tagValue = tagValue[:idx]
+	}
+
+	if tagValue == "" {
+		return field.Name
+	}
+
+	return tagValue
 }
 
 // tryPrepareValue attempts to prepare the value by checking

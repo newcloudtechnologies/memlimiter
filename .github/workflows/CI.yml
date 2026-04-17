@@ -42,7 +42,7 @@ jobs:
           sudo swapon -s
 
       - name: Test
-        run: make test_coverage
+        run: make test
 
       - name: Go Coverage Badge  # Pass the `coverage.out` output to this action
         uses: tj-actions/coverage-badge-go@v3

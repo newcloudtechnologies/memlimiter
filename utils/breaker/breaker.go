@@ -12,7 +12,10 @@ import (
 
 // Breaker can be used to stop any subsystem with background tasks gracefully.
 type Breaker struct {
+	// breakerCore is the core of the breaker.
 	*breakerCore
+
+	// exitChan is the channel that is closed when the breaker is shut down.
 	exitChan chan struct{}
 }
 
@@ -36,7 +39,7 @@ func NewBreakerWithInitValue(count int64) *Breaker {
 // Shutdown switches breaker in shutdown mode.
 func (b *Breaker) Shutdown() {
 	if b.mode.CompareAndSwap(operational, shutdown) {
-		// notify channel subscribers about termination
+		// Notify channel subscribers about termination.
 		close(b.exitChan)
 	}
 }
@@ -48,13 +51,13 @@ func (b *Breaker) ShutdownAndWait() {
 	b.Wait()
 }
 
-// Deadline implemented for the sake of compatibility with context.Context.
-func (b *Breaker) Deadline() (deadline time.Time, ok bool) {
+// Deadline is implemented for the sake of compatibility with context.Context.
+func (b *Breaker) Deadline() (time.Time, bool) {
 	return time.Time{}, false
 }
 
-// Value implemented for the sake of compatibility with context.Context.
-func (b *Breaker) Value(key any) any {
+// Value is implemented for the sake of compatibility with context.Context.
+func (b *Breaker) Value(_ any) any {
 	return nil
 }
 

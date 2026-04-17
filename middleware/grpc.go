@@ -34,7 +34,7 @@ func (g *grpcImpl) MakeUnaryServerInterceptor() grpc.UnaryServerInterceptor {
 	return func(
 		ctx context.Context,
 		req any,
-		info *grpc.UnaryServerInfo,
+		_ *grpc.UnaryServerInfo,
 		handler grpc.UnaryHandler,
 	) (any, error) {
 		allowed := g.backpressureOperator.AllowRequest()
@@ -57,7 +57,7 @@ func (g *grpcImpl) MakeStreamServerInterceptor() grpc.StreamServerInterceptor {
 	return func(
 		srv any,
 		ss grpc.ServerStream,
-		info *grpc.StreamServerInfo,
+		_ *grpc.StreamServerInfo,
 		handler grpc.StreamHandler,
 	) error {
 		allowed := g.backpressureOperator.AllowRequest()

@@ -8,6 +8,7 @@ package tracker
 
 import (
 	"fmt"
+	"strconv"
 )
 
 // Report is a memory consumption report (used only for tests).
@@ -32,9 +33,9 @@ func (r *Report) headers() []string {
 func (r *Report) toCsv() []string {
 	return []string{
 		r.Timestamp,
-		fmt.Sprint(r.RSS),
+		strconv.FormatUint(r.RSS, 10),
 		fmt.Sprint(r.Utilization),
-		fmt.Sprint(r.GOGC),
-		fmt.Sprint(r.Throttling),
+		strconv.Itoa(r.GOGC),
+		strconv.FormatUint(uint64(r.Throttling), 10),
 	}
 }
