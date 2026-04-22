@@ -52,7 +52,7 @@ def make_sessions(root_dir: os.PathLike) -> Iterable[Session]:
         Params(unlimited=False, load_duration=duration, rss_limit=GIGABYTE, coefficient=50),
     )
 
-    # FIXME: remove after debug
+    # FIXME: Remove after debug.
     # cases = (
     #     Params(unlimited=True, load_duration="10s", rss_limit=GIGABYTE),
     # )
