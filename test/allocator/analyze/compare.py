@@ -16,6 +16,9 @@ from testing import Session, make_sessions, Params
 image_tag: Final = 'allocator'
 dockerfile_path: Final = 'test/allocator'
 container_name: Final = 'allocator'
+# We retry exactly once after the first failure to handle a transient
+# container startup race, while still failing fast on real errors.
+EXEC_RUN_ATTEMPTS: Final = 2
 
 
 class PerfConfigRenderer:
@@ -63,7 +66,9 @@ class ServerConfigRenderer:
     {%  endif %}
   "listen_endpoint": "0.0.0.0:1988",
   "tracker": {
-    "path": "/etc/allocator/tracker.csv",
+    "backend_file": {
+      "path": "/etc/allocator/tracker.csv"
+    },
     "period": "10ms"
   }
 }
@@ -101,7 +106,7 @@ class DockerClient:
 
     def execute(self, mem_limit: str, session_dir_path: os.PathLike):
         try:
-            # drop container if exists
+            # Drop container if it exists.
             container = self.client.containers.get(container_name)
             container.remove(force=True)
         except docker.errors.NotFound:
@@ -111,6 +116,7 @@ class DockerClient:
             name=container_name,
             image=image_tag,
             mem_limit=mem_limit,
+            user=f"{os.getuid()}:{os.getgid()}",
             volumes={
                 str(session_dir_path): {
                     'bind': '/etc/allocator',
@@ -120,15 +126,27 @@ class DockerClient:
             detach=True,
         )
 
-        _, logs = container.exec_run(
-            cmd='/usr/local/bin/allocator perf -c /etc/allocator/perf_config.json',
-            stream=True,
-        )
-
-        for log in logs:
-            print(log)
-
-        container.stop()
+        try:
+            for attempt in range(EXEC_RUN_ATTEMPTS):
+                try:
+                    _, logs = container.exec_run(
+                        cmd='/usr/local/bin/allocator perf -c /etc/allocator/perf_config.json',
+                        stream=True,
+                    )
+                    for log in logs:
+                        print(log)
+                    break
+                except docker.errors.APIError as err:
+                    container.reload()
+                    if container.status in ("dead", "exited"):
+                        logs = container.logs(tail=200).decode(errors="replace")
+                        raise RuntimeError(
+                            f"allocator container stopped before perf run, status={container.status}\n{logs}"
+                        ) from err
+                    if attempt == EXEC_RUN_ATTEMPTS - 1:
+                        raise
+        finally:
+            container.remove(force=True)
 
 
 def run_session(
