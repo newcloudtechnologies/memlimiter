@@ -44,19 +44,19 @@ func TestComponent(t *testing.T) {
 		}
 	}()
 
-	// wait for a while to make server run asynchronously
+	// Wait for a while to make server run asynchronously.
 	time.Sleep(time.Second)
 
 	perfClient, err := makePerfClient(logger, endpoint)
 	require.NoError(t, err)
 
-	// perform load
+	// Perform load.
 	err = perfClient.Run()
 	require.NoError(t, err)
 
 	defer perfClient.Quit()
 
-	// collect reports
+	// Collect reports.
 	reports, err := allocatorServer.Tracker().GetReports()
 	require.NoError(t, err)
 	require.NotEmpty(t, reports)
@@ -114,7 +114,8 @@ func analyzeReports(t *testing.T, reports []*tracker.Report, rssLimit float64) {
 
 	sample := &stats.Sample{}
 
-	// take only the second half of observations as we expect memory consumption to be stable here due to MemLimiter work
+	// Take only the second half of observations as we expect memory consumption to be stable here
+	// due to MemLimiter work.
 	reports = reports[len(reports)/2:]
 
 	for _, r := range reports {
@@ -126,6 +127,6 @@ func analyzeReports(t *testing.T, reports []*tracker.Report, rssLimit float64) {
 	// because of possible existence of a SWAP partition.
 	actualRSS := sample.Mean()
 
-	// but since this is a soft limit, we allow small exceeding of it
+	// But since this is a soft limit, we allow small exceeding of it.
 	require.Less(t, actualRSS, 1.10*rssLimit)
 }

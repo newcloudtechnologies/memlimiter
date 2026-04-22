@@ -8,12 +8,17 @@ package memlimiter
 
 import (
 	"errors"
+	"math"
 
 	"github.com/newcloudtechnologies/memlimiter/controller/nextgc"
+	"github.com/newcloudtechnologies/memlimiter/utils/config/bytes"
 )
 
 // Config - high-level MemLimiter config.
 type Config struct {
+	// GoMemoryLimit optionally sets Go runtime soft memory limit via debug.SetMemoryLimit.
+	// Zero means disabled.
+	GoMemoryLimit bytes.Bytes `json:"go_memory_limit"`
 	// ControllerNextGC - NextGC-based controller
 	ControllerNextGC *nextgc.ControllerConfig `json:"controller_nextgc"` //nolint:tagliatelle
 	// TODO:
@@ -30,6 +35,10 @@ func (c *Config) Prepare() error {
 
 	if c.ControllerNextGC == nil {
 		return errors.New("empty ControllerNextGC")
+	}
+
+	if c.GoMemoryLimit.Value > uint64(math.MaxInt64) {
+		return errors.New("GoMemoryLimit exceeds int64 range")
 	}
 
 	return nil

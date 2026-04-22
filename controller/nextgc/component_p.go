@@ -72,6 +72,10 @@ func (c *componentP) value(utilization float64) (float64, error) {
 
 // valueRaw returns the raw proportional component's output.
 func (c *componentP) valueRaw(utilization float64) (float64, error) {
+	if math.IsNaN(utilization) {
+		return math.NaN(), fmt.Errorf("value is undefined if memory usage = %v", utilization)
+	}
+
 	if utilization < 0 {
 		return math.NaN(), fmt.Errorf("value is undefined if memory usage = %v", utilization)
 	}
