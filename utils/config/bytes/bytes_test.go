@@ -12,6 +12,7 @@ import (
 
 	"code.cloudfoundry.org/bytefmt"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 type testStruct struct {
@@ -22,27 +23,27 @@ func TestSize_UnmarshalJSON(t *testing.T) {
 	var ts testStruct
 
 	data := []byte(`{"size": "20M"}`)
-	assert.NoError(t, json.Unmarshal(data, &ts))
+	require.NoError(t, json.Unmarshal(data, &ts))
 	assert.Equal(t, uint64(20*bytefmt.MEGABYTE), ts.Size.Value)
 
 	data = []byte(`{"size":"invalid"}`)
-	assert.Error(t, json.Unmarshal(data, &ts))
+	require.Error(t, json.Unmarshal(data, &ts))
 
 	data = []byte(`{"size":"30MB"}`)
-	assert.NoError(t, json.Unmarshal(data, &ts))
+	require.NoError(t, json.Unmarshal(data, &ts))
 	assert.Equal(t, uint64(30*bytefmt.MEGABYTE), ts.Size.Value)
 
 	data = []byte(`{"size":"40K"}`)
-	assert.NoError(t, json.Unmarshal(data, &ts))
+	require.NoError(t, json.Unmarshal(data, &ts))
 	assert.Equal(t, uint64(40*bytefmt.KILOBYTE), ts.Size.Value)
 
 	data = []byte(`{"size":"50KB"}`)
-	assert.NoError(t, json.Unmarshal(data, &ts))
+	require.NoError(t, json.Unmarshal(data, &ts))
 	assert.Equal(t, uint64(50*bytefmt.KILOBYTE), ts.Size.Value)
 
 	// also check lowercase
 	data = []byte(`{"size":"50kb"}`)
-	assert.NoError(t, json.Unmarshal(data, &ts))
+	require.NoError(t, json.Unmarshal(data, &ts))
 	assert.Equal(t, uint64(50*bytefmt.KILOBYTE), ts.Size.Value)
 }
 
@@ -51,18 +52,18 @@ func TestSize_MarshalJSON(t *testing.T) {
 
 	ts.Size = Bytes{Value: 20 * bytefmt.MEGABYTE}
 	data, err := json.Marshal(&ts)
-	assert.NoError(t, err)
-	assert.Equal(t, []byte(`{"size":"20M"}`), data)
+	require.NoError(t, err)
+	assert.JSONEq(t, `{"size":"20M"}`, string(data))
 
 	ts.Size = Bytes{Value: 40 * bytefmt.KILOBYTE}
 	data, err = json.Marshal(&ts)
-	assert.NoError(t, err)
-	assert.Equal(t, []byte(`{"size":"40K"}`), data)
+	require.NoError(t, err)
+	assert.JSONEq(t, `{"size":"40K"}`, string(data))
 
 	ts.Size = Bytes{Value: 1 * bytefmt.BYTE}
 	data, err = json.Marshal(&ts)
-	assert.NoError(t, err)
-	assert.Equal(t, []byte(`{"size":"1B"}`), data)
+	require.NoError(t, err)
+	assert.JSONEq(t, `{"size":"1B"}`, string(data))
 }
 
 func TestBytesByValue(t *testing.T) {
@@ -73,12 +74,12 @@ func TestBytesByValue(t *testing.T) {
 	var ms masterStructVal
 
 	data := []byte(`{"t":{"size":"20M"}}`)
-	assert.NoError(t, json.Unmarshal(data, &ms))
+	require.NoError(t, json.Unmarshal(data, &ms))
 	assert.Equal(t, uint64(20*bytefmt.MEGABYTE), ms.T.Size.Value)
 
 	dump, err := json.Marshal(&ms)
-	assert.NoError(t, err)
-	assert.Equal(t, []byte(`{"t":{"size":"20M"}}`), dump)
+	require.NoError(t, err)
+	assert.JSONEq(t, `{"t":{"size":"20M"}}`, string(dump))
 }
 
 func TestBytesByPointer(t *testing.T) {
@@ -89,18 +90,22 @@ func TestBytesByPointer(t *testing.T) {
 	var ms masterStructPtr
 
 	data := []byte(`{"t":{"size":"20M"}}`)
-	assert.NoError(t, json.Unmarshal(data, &ms))
+	require.NoError(t, json.Unmarshal(data, &ms))
 	assert.Equal(t, uint64(20*bytefmt.MEGABYTE), ms.T.Size.Value)
 
 	dump, err := json.Marshal(&ms)
-	assert.NoError(t, err)
-	assert.Equal(t, []byte(`{"t":{"size":"20M"}}`), dump)
+	require.NoError(t, err)
+	assert.JSONEq(t, `{"t":{"size":"20M"}}`, string(dump))
 }
 
 func TestBytesZeroValue(t *testing.T) {
 	var ts testStruct
 
-	data := []byte(`{"size": "0"}`)
-	assert.NoError(t, json.Unmarshal(data, &ts))
-	assert.Equal(t, uint64(0*bytefmt.MEGABYTE), ts.Size.Value)
+	data := []byte(`{"size": "20M"}`)
+	require.NoError(t, json.Unmarshal(data, &ts))
+	assert.Equal(t, uint64(20*bytefmt.MEGABYTE), ts.Size.Value)
+
+	data = []byte(`{"size": "0"}`)
+	require.NoError(t, json.Unmarshal(data, &ts))
+	assert.Equal(t, uint64(0), ts.Size.Value)
 }

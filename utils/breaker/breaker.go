@@ -7,63 +7,39 @@
 package breaker
 
 import (
-	"runtime"
-	"sync/atomic"
 	"time"
-
-	"github.com/pkg/errors"
-)
-
-const (
-	operational int32 = iota + 1
-	shutdown
 )
 
 // Breaker can be used to stop any subsystem with background tasks gracefully.
 type Breaker struct {
+	// breakerCore is the core of the breaker.
+	*breakerCore
+
+	// exitChan is the channel that is closed when the breaker is shut down.
 	exitChan chan struct{}
-	count    int64
-	mode     int32
 }
 
-// Inc increments number of tasks.
-func (b *Breaker) Inc() error {
-	if !b.IsOperational() {
-		return errors.New("shutdown in progress")
+// NewBreaker - default breaker constructor.
+func NewBreaker() *Breaker {
+	return &Breaker{
+		breakerCore: newBreakerCore(),
+		exitChan:    make(chan struct{}),
 	}
-
-	atomic.AddInt64(&b.count, 1)
-
-	return nil
 }
 
-// Dec decrements number of tasks.
-func (b *Breaker) Dec() {
-	atomic.AddInt64(&b.count, -1)
-}
+// NewBreakerWithInitValue - alternative breaker constructor convenient for usage
+// in pools and actors, when you know how many goroutines will work from the very beginning.
+func NewBreakerWithInitValue(count int64) *Breaker {
+	b := NewBreaker()
+	b.count.Store(count)
 
-// IsOperational checks whether breaker is in operational mode.
-func (b *Breaker) IsOperational() bool { return atomic.LoadInt32(&b.mode) == operational }
-
-// Wait blocks until the number of tasks becomes equal to zero.
-func (b *Breaker) Wait() {
-	if atomic.LoadInt32(&b.mode) != shutdown {
-		panic("cannot wait on operational Breaker, turn it off first")
-	}
-
-	for {
-		if atomic.LoadInt64(&b.count) == 0 {
-			break
-		}
-
-		runtime.Gosched()
-	}
+	return b
 }
 
 // Shutdown switches breaker in shutdown mode.
 func (b *Breaker) Shutdown() {
-	if atomic.CompareAndSwapInt32(&b.mode, operational, shutdown) {
-		// notify channel subscribers about termination
+	if b.mode.CompareAndSwap(operational, shutdown) {
+		// Notify channel subscribers about termination.
 		close(b.exitChan)
 	}
 }
@@ -75,43 +51,17 @@ func (b *Breaker) ShutdownAndWait() {
 	b.Wait()
 }
 
-// Deadline implemented for the sake of compatibility with context.Context.
-func (b *Breaker) Deadline() (deadline time.Time, ok bool) {
+// Deadline is implemented for the sake of compatibility with context.Context.
+func (b *Breaker) Deadline() (time.Time, bool) {
 	return time.Time{}, false
 }
 
-// Value implemented for the sake of compatibility with context.Context.
-func (b *Breaker) Value(key interface{}) interface{} { return nil }
+// Value is implemented for the sake of compatibility with context.Context.
+func (b *Breaker) Value(_ any) any {
+	return nil
+}
 
 // Done returns channel which can be used in a manner similar to context.Context.Done().
-func (b *Breaker) Done() <-chan struct{} { return b.exitChan }
-
-// ErrNotOperational tells that Breaker has been shut down.
-var ErrNotOperational = errors.New("breaker is not operational")
-
-// Err returns error which can be used in a manner similar to context.Context.Done().
-func (b *Breaker) Err() error {
-	if b.IsOperational() {
-		return nil
-	}
-
-	return ErrNotOperational
-}
-
-// NewBreaker - default breaker constructor.
-func NewBreaker() *Breaker {
-	return &Breaker{
-		count:    0,
-		mode:     operational,
-		exitChan: make(chan struct{}),
-	}
-}
-
-// NewBreakerWithInitValue - alternative breaker constructor convenient for usage
-// in pools and actors, when you know how many goroutines will work from the very beginning.
-func NewBreakerWithInitValue(value int64) *Breaker {
-	b := NewBreaker()
-	b.count = value
-
-	return b
+func (b *Breaker) Done() <-chan struct{} {
+	return b.exitChan
 }

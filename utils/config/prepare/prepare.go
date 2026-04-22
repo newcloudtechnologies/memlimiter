@@ -7,16 +7,13 @@
 package prepare
 
 import (
+	"fmt"
 	"reflect"
-
-	"github.com/pkg/errors"
+	"strings"
 )
 
-const (
-	tagName        = "json"
-	prepareTagName = "prepare"
-	optValue       = "optional"
-)
+// tagName is the name of the tag used to specify the JSON field name.
+const tagName = "json"
 
 // Preparer is used for recursive validation of configuration structures.
 type Preparer interface {
@@ -25,79 +22,101 @@ type Preparer interface {
 }
 
 // Prepare calls Prepare() method on the object and its fields recursively.
-func Prepare(src interface{}) error {
+func Prepare(src any) error {
 	if src == nil {
 		return nil
 	}
 
-	v := reflect.ValueOf(src)
+	return traverse(reflect.ValueOf(src), false)
+}
 
-	pr, ok := src.(Preparer)
-	if ok {
-		err := pr.Prepare()
+// traverse recursively validates the configuration structure.
+func traverse(v reflect.Value, preparedByParent bool) error {
+	if !v.IsValid() {
+		return nil
+	}
+
+	//nolint:exhaustive // reflect.Kind handling is intentionally grouped, default covers all other kinds.
+	switch v.Kind() {
+	case reflect.Interface, reflect.Pointer:
+		return traversePointerOrInterface(v)
+	case reflect.Struct:
+		return traverseStruct(v, preparedByParent)
+	default:
+		return tryPrepareValue(v)
+	}
+}
+
+// traversePointerOrInterface traverses a pointer or an interface.
+func traversePointerOrInterface(v reflect.Value) error {
+	if v.IsNil() {
+		return nil
+	}
+
+	err := tryPrepareValue(v)
+	if err != nil {
+		return err
+	}
+
+	return traverse(v.Elem(), true)
+}
+
+// traverseStruct traverses a struct.
+func traverseStruct(v reflect.Value, preparedByParent bool) error {
+	if !preparedByParent {
+		err := tryPrepareValue(v)
 		if err != nil {
-			return errors.Wrap(err, "prepare error")
+			return err
 		}
 	}
 
-	return traverse(v, true)
-}
+	structType := v.Type()
 
-//nolint:gocognit,gocyclo,exhaustive,cyclop
-func traverse(v reflect.Value, parentTraversed bool) (err error) {
-	switch v.Kind() {
-	case reflect.Interface, reflect.Ptr:
-		if !v.IsNil() && v.CanInterface() {
-			if err := tryPrepareInterface(v.Interface()); err != nil {
-				return err
-			}
+	numFields := v.NumField()
+	for j := range numFields {
+		err := traverse(v.Field(j), false)
+		if err != nil {
+			field := structType.Field(j)
 
-			if err := traverse(v.Elem(), true); err != nil {
-				return err
-			}
-		}
-	case reflect.Struct:
-		if !parentTraversed && v.CanInterface() {
-			if err := tryPrepareInterface(v.Interface()); err != nil {
-				return err
-			}
-		}
-
-		for j := 0; j < v.NumField(); j++ {
-			optTag := v.Type().Field(j).Tag.Get(prepareTagName)
-			if optTag == optValue && v.Field(j).IsNil() {
-				continue
-			}
-
-			err := traverse(v.Field(j), false)
-			if err != nil {
-				tagValue := v.Type().Field(j).Tag.Get(tagName)
-
-				return errors.Errorf("invalid section '%s': %v", tagValue, err)
-			}
-
-			// call Prepare() on children.
-			child := v.Field(j)
-			if child.CanAddr() {
-				if child.Addr().MethodByName("Prepare").Kind() != reflect.Invalid {
-					child.Addr().MethodByName("Prepare").Call([]reflect.Value{})
-				}
-			}
-		}
-	default:
-		if v.CanInterface() {
-			return tryPrepareInterface(v.Interface())
+			return fmt.Errorf("invalid section '%s': %w", fieldTagOrName(&field), err)
 		}
 	}
 
 	return nil
 }
 
-func tryPrepareInterface(v interface{}) (err error) {
-	pr, ok := v.(Preparer)
-	if ok {
-		err = pr.Prepare()
+// fieldTagOrName returns the tag value or the field name.
+func fieldTagOrName(field *reflect.StructField) string {
+	tagValue := field.Tag.Get(tagName)
+	if idx := strings.Index(tagValue, ","); idx >= 0 {
+		tagValue = tagValue[:idx]
 	}
 
-	return
+	if tagValue == "" {
+		return field.Name
+	}
+
+	return tagValue
+}
+
+// tryPrepareValue attempts to prepare the value by checking
+// if it implements the Preparer interface and calling its Prepare method.
+func tryPrepareValue(v reflect.Value) error {
+	if !v.IsValid() {
+		return nil
+	}
+
+	if v.CanInterface() {
+		if preparer, ok := v.Interface().(Preparer); ok {
+			return preparer.Prepare()
+		}
+	}
+
+	if v.CanAddr() && v.Addr().CanInterface() {
+		if preparer, ok := v.Addr().Interface().(Preparer); ok {
+			return preparer.Prepare()
+		}
+	}
+
+	return nil
 }

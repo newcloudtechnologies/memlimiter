@@ -7,11 +7,12 @@
 package perf
 
 import (
+	"errors"
+
 	"golang.org/x/time/rate"
 
 	"github.com/newcloudtechnologies/memlimiter/utils/config/bytes"
 	"github.com/newcloudtechnologies/memlimiter/utils/config/duration"
-	"github.com/pkg/errors"
 )
 
 // Config - performance client configuration.

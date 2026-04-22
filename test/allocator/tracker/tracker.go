@@ -7,12 +7,13 @@
 package tracker
 
 import (
+	"errors"
+	"fmt"
 	"time"
 
 	"github.com/go-logr/logr"
 	"github.com/newcloudtechnologies/memlimiter"
 	"github.com/newcloudtechnologies/memlimiter/utils/breaker"
-	"github.com/pkg/errors"
 )
 
 // Tracker is responsible for service stats persistence.
@@ -22,76 +23,6 @@ type Tracker struct {
 	cfg        *Config
 	breaker    *breaker.Breaker
 	logger     logr.Logger
-}
-
-func (tr *Tracker) makeReport() (*Report, error) {
-	out := &Report{}
-
-	out.Timestamp = time.Now().Format(time.RFC3339Nano)
-
-	mlStats, err := tr.memLimiter.GetStats()
-	if err != nil {
-		return nil, errors.Wrap(err, "memlimiter stats")
-	}
-
-	if mlStats != nil {
-		out.RSS = mlStats.Controller.MemoryBudget.RSSActual
-		out.Utilization = mlStats.Controller.MemoryBudget.Utilization
-
-		if mlStats.Backpressure != nil {
-			out.GOGC = mlStats.Backpressure.ControlParameters.GOGC
-			out.Throttling = mlStats.Backpressure.ControlParameters.ThrottlingPercentage
-		}
-	}
-
-	return out, nil
-}
-
-func (tr *Tracker) dumpReport() error {
-	r, err := tr.makeReport()
-	if err != nil {
-		return errors.Wrap(err, "dump Report")
-	}
-
-	if err = tr.backend.saveReport(r); err != nil {
-		return errors.Wrap(err, "backend save Report")
-	}
-
-	return nil
-}
-
-func (tr *Tracker) loop() {
-	defer tr.breaker.Dec()
-
-	ticker := time.NewTicker(tr.cfg.Period.Duration)
-	defer ticker.Stop()
-
-	for {
-		select {
-		case <-ticker.C:
-			if err := tr.dumpReport(); err != nil {
-				tr.logger.Error(err, "dump Report")
-			}
-		case <-tr.breaker.Done():
-			return
-		}
-	}
-}
-
-// GetReports returns the accumulated reports.
-func (tr *Tracker) GetReports() ([]*Report, error) {
-	out, err := tr.backend.getReports()
-	if err != nil {
-		return nil, errors.Wrap(err, "backend get reports")
-	}
-
-	return out, nil
-}
-
-// Quit gracefully terminates tracker.
-func (tr *Tracker) Quit() {
-	tr.breaker.ShutdownAndWait()
-	tr.backend.quit()
 }
 
 // NewTrackerFromConfig is a constructor of a Tracker.
@@ -111,7 +42,7 @@ func NewTrackerFromConfig(logger logr.Logger, cfg *Config, memLimiter memlimiter
 	}
 
 	if err != nil {
-		return nil, errors.Wrap(err, "new backend")
+		return nil, fmt.Errorf("new backend: %w", err)
 	}
 
 	tr := &Tracker{
@@ -125,4 +56,75 @@ func NewTrackerFromConfig(logger logr.Logger, cfg *Config, memLimiter memlimiter
 	go tr.loop()
 
 	return tr, nil
+}
+
+// GetReports returns the accumulated reports.
+func (tr *Tracker) GetReports() ([]*Report, error) {
+	out, err := tr.backend.getReports()
+	if err != nil {
+		return nil, fmt.Errorf("backend get reports: %w", err)
+	}
+
+	return out, nil
+}
+
+// Quit gracefully terminates tracker.
+func (tr *Tracker) Quit() {
+	tr.breaker.ShutdownAndWait()
+	tr.backend.quit()
+}
+
+func (tr *Tracker) makeReport() (*Report, error) {
+	out := &Report{}
+
+	out.Timestamp = time.Now().Format(time.RFC3339Nano)
+
+	mlStats, err := tr.memLimiter.GetStats()
+	if err != nil {
+		return nil, fmt.Errorf("memlimiter stats: %w", err)
+	}
+
+	if mlStats != nil {
+		out.RSS = mlStats.Controller.MemoryBudget.RSSActual
+		out.Utilization = mlStats.Controller.MemoryBudget.Utilization
+
+		if mlStats.Backpressure != nil {
+			out.GOGC = mlStats.Backpressure.ControlParameters.GOGC
+			out.Throttling = mlStats.Backpressure.ControlParameters.ThrottlingPercentage
+		}
+	}
+
+	return out, nil
+}
+
+func (tr *Tracker) dumpReport() error {
+	r, err := tr.makeReport()
+	if err != nil {
+		return fmt.Errorf("dump Report: %w", err)
+	}
+
+	if err = tr.backend.saveReport(r); err != nil {
+		return fmt.Errorf("backend save Report: %w", err)
+	}
+
+	return nil
+}
+
+func (tr *Tracker) loop() {
+	defer tr.breaker.Dec()
+
+	ticker := time.NewTicker(tr.cfg.Period.Duration)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ticker.C:
+			err := tr.dumpReport()
+			if err != nil {
+				tr.logger.Error(err, "dump Report")
+			}
+		case <-tr.breaker.Done():
+			return
+		}
+	}
 }

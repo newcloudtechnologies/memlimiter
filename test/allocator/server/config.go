@@ -7,9 +7,10 @@
 package server
 
 import (
+	"errors"
+
 	"github.com/newcloudtechnologies/memlimiter"
 	"github.com/newcloudtechnologies/memlimiter/test/allocator/tracker"
-	"github.com/pkg/errors"
 )
 
 // Config - a top-level service configuration.

@@ -23,24 +23,37 @@ type serviceStub struct {
 	breaker           *breaker.Breaker
 }
 
-func (s *serviceStub) loop() {
-	defer s.breaker.Dec()
-
-	for {
-		select {
-		case record := <-s.statsSubscription.Updates():
-			s.latestStats.Store(record)
-		case <-s.breaker.Done():
-			return
+// newServiceStub constructs a new service stub.
+func newServiceStub(statsSubscription stats.ServiceStatsSubscription) Service {
+	if statsSubscription == nil {
+		return &serviceStub{
+			breaker: breaker.NewBreaker(),
 		}
 	}
+
+	out := &serviceStub{
+		statsSubscription: statsSubscription,
+		breaker:           breaker.NewBreakerWithInitValue(1),
+	}
+
+	go out.loop()
+
+	return out
 }
 
+// Middleware returns the middleware.
 func (s *serviceStub) Middleware() middleware.Middleware {
 	// TODO: return stub
 	return nil
 }
 
+// Quit terminates the service stub gracefully.
+func (s *serviceStub) Quit() {
+	s.breaker.Shutdown()
+	s.statsSubscription.Quit()
+}
+
+// GetStats returns the current stats.
 func (s *serviceStub) GetStats() (*stats.MemLimiterStats, error) {
 	if val := s.latestStats.Load(); val != nil {
 		//nolint:forcetypeassert
@@ -57,27 +70,20 @@ func (s *serviceStub) GetStats() (*stats.MemLimiterStats, error) {
 		return out, nil
 	}
 
+	//nolint:nilnil // This is a stub.
 	return nil, nil
 }
 
-func (s *serviceStub) Quit() {
-	s.breaker.Shutdown()
-	s.statsSubscription.Quit()
-}
+// loop is the main loop of the service stub.
+func (s *serviceStub) loop() {
+	defer s.breaker.Dec()
 
-func newServiceStub(statsSubscription stats.ServiceStatsSubscription) Service {
-	if statsSubscription == nil {
-		return &serviceStub{
-			breaker: breaker.NewBreaker(),
+	for {
+		select {
+		case record := <-s.statsSubscription.Updates():
+			s.latestStats.Store(record)
+		case <-s.breaker.Done():
+			return
 		}
 	}
-
-	out := &serviceStub{
-		statsSubscription: statsSubscription,
-		breaker:           breaker.NewBreakerWithInitValue(1),
-	}
-
-	go out.loop()
-
-	return out
 }

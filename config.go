@@ -7,7 +7,7 @@
 package memlimiter
 
 import (
-	"github.com/pkg/errors"
+	"errors"
 
 	"github.com/newcloudtechnologies/memlimiter/controller/nextgc"
 )

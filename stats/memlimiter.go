@@ -91,8 +91,8 @@ func (cp *ControlParameters) String() string {
 }
 
 // ToKeysAndValues serializes struct for use in logr.Logger.
-func (cp *ControlParameters) ToKeysAndValues() []interface{} {
-	return []interface{}{
+func (cp *ControlParameters) ToKeysAndValues() []any {
+	return []any{
 		"gogc", cp.GOGC,
 		"throttling_percentage", cp.ThrottlingPercentage,
 	}
