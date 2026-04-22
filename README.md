@@ -2,7 +2,7 @@
 
 [![Go Reference](https://pkg.go.dev/badge/github.com/newcloudtechnologies/memlimiter.svg)](https://pkg.go.dev/github.com/newcloudtechnologies/memlimiter)
 [![Go Report Card](https://goreportcard.com/badge/github.com/newcloudtechnologies/memlimiter)](https://goreportcard.com/report/github.com/newcloudtechnologies/memlimiter)
-![Coverage](https://img.shields.io/badge/Coverage-82.8%25-brightgreen)
+![Coverage](https://img.shields.io/badge/Coverage-82.9%25-brightgreen)
 ![CI](https://github.com/newcloudtechnologies/memlimiter/actions/workflows/CI.yml/badge.svg)
 
 `memlimiter` helps a Go service avoid OOM by combining adaptive GC tuning and request throttling under memory pressure.
