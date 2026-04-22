@@ -117,6 +117,11 @@ lint: lint-prepare
 ## Use project-local golangci-lint from ./bin.
 	$(GOLANGCI_LINT) run ./...
 
+.PHONY: sync-ci-lint-version
+sync-ci-lint-version:
+## Sync CI golangci-lint version with Makefile pin.
+	./scripts/sync_ci_golangci_lint_version.sh
+
 .PHONY: fix
 fix: lint-prepare
 ## Apply automatic source fixes.

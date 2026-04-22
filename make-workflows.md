@@ -121,6 +121,7 @@ Expected generated files:
 - `make allocator-build` - build `test/allocator/allocator` only.
 - `make generate` - regenerate protobuf files for allocator schema.
 - `make lint-prepare` - install lint tools and verify lint config.
+- `make sync-ci-lint-version` - copy `GOLANGCI_LINT_VERSION` from `Makefile` to `.github/workflows/CI.yml`.
 - `make clean` - remove generated binaries, coverage files, and Python cache for analyzer scripts.
 
 ## Common Overrides
