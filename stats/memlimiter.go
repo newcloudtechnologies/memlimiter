@@ -36,8 +36,8 @@ type MemoryBudgetStats struct {
 	RSSLimit uint64
 	// GoAllocLimit - allocation limit for Go Runtime (with the except of CGO) [bytes].
 	GoAllocLimit uint64
-	// Utilization - memory budget utilization [percents]
-	// (definition depends on a particular controller implementation).
+	// Utilization - memory budget utilization ratio
+	// (for example, 1.0 means 100%; definition depends on controller implementation).
 	Utilization float64
 }
 
