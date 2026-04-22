@@ -52,7 +52,7 @@ func (t *throttler) AllowRequest() bool {
 		return true
 	}
 
-	// Flip a coin in the range [0; 100].
+	// Flip a coin in the range [0; 99].
 	// If the actual value is less than the threshold value, throttle the request.
 	// Otherwise, allow the request.
 	// math/rand/v2 top-level functions are safe for concurrent use and provide

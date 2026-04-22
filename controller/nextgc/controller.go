@@ -36,7 +36,7 @@ type controllerImpl struct {
 	pValue            float64                  // proportional component's output
 	sumValue          float64                  // final output
 	goAllocLimit      uint64                   // memory budget [bytes]
-	utilization       float64                  // memory budget utilization [percents]
+	utilization       float64                  // memory budget utilization ratio (1.0 = 100%)
 	rss               uint64                   // physical memory actual consumption
 	consumptionReport *stats.ConsumptionReport // latest special memory consumers report
 	controlParameters *stats.ControlParameters // latest control parameters value

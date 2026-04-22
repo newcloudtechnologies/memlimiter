@@ -99,6 +99,8 @@ $$ Throttling = \begin{cases}
 \displaystyle 0 \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ otherwise \\
 \end{cases}$$
 
+Implementation note: internal `Utilization` telemetry is a ratio (`1.0 == 100%`), while `danger_zone_*` settings are configured in percentage points (`(0, 100]`).
+
 ## Architecture
 
 The MemLimiter comprises two main parts:
@@ -126,14 +128,19 @@ You must also provide your own `stats.ServiceStatsSubscription` and `stats.Servi
 
 There are several key settings in MemLimiter configuration (see [top-level config](config.go) and [controller config](controller/nextgc/config.go)):
 
-- `go_memory_limit` (optional, top-level)
-- `controller_nextgc.rss_limit`
-- `controller_nextgc.danger_zone_gogc`
-- `controller_nextgc.danger_zone_throttling`
-- `controller_nextgc.min_gogc`
-- `controller_nextgc.period`
-- `controller_nextgc.component_proportional.window_size`
-- `controller_nextgc.component_proportional.coefficient` ($C_{p}$)
+| Setting name | Type | Allowed range | Default | Description |
+| --- | --- | --- | --- | --- |
+| `go_memory_limit` | bytes string (`"800M"`, `"1G"`, `"0"`) | `"0"` (disabled) or `(0, MaxInt64]` bytes | `0` (disabled) | Optional Go runtime soft memory limit applied via `debug.SetMemoryLimit` during service lifecycle. |
+| `controller_nextgc.rss_limit` | bytes string | `(0, +inf)` bytes | none (required) | Hard process RSS budget used by the controller. |
+| `controller_nextgc.danger_zone_gogc` | unsigned integer | `(0, 100]` | none (required) | Utilization threshold that enables GC tightening logic. Value `100` is emergency-only trigger (near-full-budget). |
+| `controller_nextgc.danger_zone_throttling` | unsigned integer | `(0, 100]` | none (required) | Utilization threshold that enables request throttling. Value `100` is emergency-only trigger (near-full-budget). |
+| `controller_nextgc.min_gogc` | integer | `0` (auto-default), or `[1, 100]` | `10` (when set to `0`) | Lower bound for computed `GOGC` in red zone. |
+| `controller_nextgc.period` | duration string (`"100ms"`, `"1s"`) | `(0, +inf)` duration | none (required) | Controller loop period for control recomputation. |
+| `controller_nextgc.component_proportional.coefficient` (`C_p`) | float | any non-zero value | none (required) | Proportional component strength (higher value means more aggressive reaction near limit). |
+| `controller_nextgc.component_proportional.window_size` | unsigned integer | `[0, +inf)` | `0` | EMA smoothing window size for controller output (`0` disables smoothing). |
+
+Recommendation: keep `danger_zone_throttling >= danger_zone_gogc` so GC intensification starts before request shedding.  
+Implementation detail: current NextGC controller clamps output to `99`, so maximum throttling emitted by this controller is `99%`.
 
 Example:
 

@@ -23,11 +23,11 @@ type ControllerConfig struct {
 	RSSLimit bytes.Bytes `json:"rss_limit"`
 	// DangerZoneGOGC - RSS utilization threshold that triggers controller to
 	// set more conservative parameters for GC.
-	// Possible values are in range (0; 100).
+	// Possible values are in range (0; 100].
 	DangerZoneGOGC uint32 `json:"danger_zone_gogc"`
 	// DangerZoneThrottling - RSS utilization threshold that triggers controller to
 	// throttle incoming requests.
-	// Possible values are in range (0; 100).
+	// Possible values are in range (0; 100].
 	// It's recommended to keep it greater than or equal to DangerZoneGOGC so that
 	// the service first intensifies GC and starts throttling only later.
 	DangerZoneThrottling uint32 `json:"danger_zone_throttling"`
@@ -82,16 +82,16 @@ func (c *ControllerConfig) validateRSSLimit() error {
 }
 
 func (c *ControllerConfig) validateDangerZoneGOGC() error {
-	if c.DangerZoneGOGC == 0 || c.DangerZoneGOGC >= 100 {
-		return errors.New("invalid DangerZoneGOGC value (must belong to (0; 100))")
+	if c.DangerZoneGOGC == 0 || c.DangerZoneGOGC > 100 {
+		return errors.New("invalid DangerZoneGOGC value (must belong to (0; 100])")
 	}
 
 	return nil
 }
 
 func (c *ControllerConfig) validateDangerZoneThrottling() error {
-	if c.DangerZoneThrottling == 0 || c.DangerZoneThrottling >= 100 {
-		return errors.New("invalid DangerZoneThrottling value (must belong to (0; 100))")
+	if c.DangerZoneThrottling == 0 || c.DangerZoneThrottling > 100 {
+		return errors.New("invalid DangerZoneThrottling value (must belong to (0; 100])")
 	}
 
 	return nil

@@ -29,12 +29,17 @@ func TestComponentConfig(t *testing.T) {
 		require.Error(t, c.Prepare())
 	})
 
-	t.Run("bad danger zone GOGC equal to 100", func(t *testing.T) {
+	t.Run("danger zone GOGC equal to 100 is allowed", func(t *testing.T) {
 		c := &ControllerConfig{
-			RSSLimit:       bytes.Bytes{Value: 1},
-			DangerZoneGOGC: 100,
+			RSSLimit:             bytes.Bytes{Value: 1},
+			DangerZoneGOGC:       100,
+			DangerZoneThrottling: 100,
+			Period:               duration.Duration{Duration: 1},
+			ComponentProportional: &ComponentProportionalConfig{
+				Coefficient: 1,
+			},
 		}
-		require.Error(t, c.Prepare())
+		require.NoError(t, c.Prepare())
 	})
 
 	t.Run("bad danger zone throttling", func(t *testing.T) {
@@ -46,13 +51,17 @@ func TestComponentConfig(t *testing.T) {
 		require.Error(t, c.Prepare())
 	})
 
-	t.Run("bad danger zone throttling equal to 100", func(t *testing.T) {
+	t.Run("danger zone throttling equal to 100 is allowed", func(t *testing.T) {
 		c := &ControllerConfig{
 			RSSLimit:             bytes.Bytes{Value: 1},
 			DangerZoneGOGC:       50,
 			DangerZoneThrottling: 100,
+			Period:               duration.Duration{Duration: 1},
+			ComponentProportional: &ComponentProportionalConfig{
+				Coefficient: 1,
+			},
 		}
-		require.Error(t, c.Prepare())
+		require.NoError(t, c.Prepare())
 	})
 
 	t.Run("bad period", func(t *testing.T) {
