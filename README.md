@@ -108,6 +108,8 @@ The MemLimiter comprises two main parts:
 
 ## Quick start guide
 
+For command workflows and expected outputs, see [`make-workflows.md`](make-workflows.md).
+
 ### Services without `Cgo`
 
 Refer to the [example service](test/allocator/server/server.go).

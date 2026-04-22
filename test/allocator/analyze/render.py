@@ -39,7 +39,7 @@ def control_params_subplots(reports: List[Report], path: os.PathLike):
 
             ax.set_xlabel('Time, seconds')
 
-            # RSS plot
+            # RSS consumption plot.
             color = 'tab:red'
             l0 = ax.plot(df['elapsed_time'], df['rss'], color=color, label='RSS')
             ax.set_ylabel('RSS, bytes')
@@ -47,14 +47,14 @@ def control_params_subplots(reports: List[Report], path: os.PathLike):
             ax.set_yticks([ml * 1024 * 1024 for ml in (256, 512, 512 + 256, 1024)])
             ax.yaxis.set_major_formatter(bytes_major_formatter)
 
-            # GOGC plot
+            # GOGC consumption plot.
             color = 'tab:blue'
             twin1 = ax.twinx()
             l1 = twin1.plot(df['elapsed_time'], df['gogc'], color=color, label='GOGC')
             twin1.set_ylabel('GOGC')
             twin1.set_ylim(-5, 105)
 
-            # Throttling plot
+            # Throttling plot.
             color = 'tab:green'
             twin2 = ax.twinx()
             twin2.spines.right.set_position(("axes", 1.2))
@@ -62,12 +62,12 @@ def control_params_subplots(reports: List[Report], path: os.PathLike):
             twin2.set_ylabel('Throttling')
             twin2.set_ylim(-5, 105)
 
-            # legend
+            # Legend.
             if not ls or not labels:
                 ls = l0 + l1 + l2
                 labels = [l.get_label() for l in ls]
 
-            # title
+            # Title.
             if report.session.params.unlimited:
                 title = "MemLimiter disabled"
             else:
