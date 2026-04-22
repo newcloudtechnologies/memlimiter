@@ -28,4 +28,6 @@ type Operator interface {
 	AllowRequest() bool
 	// GetStats returns statistics of Backpressure subsystem.
 	GetStats() (*stats.BackpressureStats, error)
+	// Quit gracefully terminates backpressure subsystem and restores runtime settings.
+	Quit()
 }

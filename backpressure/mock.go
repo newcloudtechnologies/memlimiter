@@ -23,3 +23,25 @@ func (m *OperatorMock) SetControlParameters(value *stats.ControlParameters) erro
 
 	return args.Error(0)
 }
+
+func (m *OperatorMock) AllowRequest() bool {
+	args := m.Called()
+
+	return args.Bool(0)
+}
+
+func (m *OperatorMock) GetStats() (*stats.BackpressureStats, error) {
+	args := m.Called()
+
+	raw := args.Get(0)
+	if raw == nil {
+		return nil, args.Error(1)
+	}
+
+	//nolint:forcetypeassert // Mocked method.
+	return raw.(*stats.BackpressureStats), args.Error(1)
+}
+
+func (m *OperatorMock) Quit() {
+	m.Called()
+}

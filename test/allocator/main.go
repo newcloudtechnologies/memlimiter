@@ -4,6 +4,7 @@
  * License: https://github.com/newcloudtechnologies/memlimiter/blob/master/LICENSE
  */
 
+// Package main provides the allocator demo entrypoint.
 package main
 
 import (

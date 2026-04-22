@@ -25,10 +25,10 @@ class PerfConfigRenderer:
     __t: Final = '''
 {
   "endpoint": "localhost:1988",
-  "rps": 100,
+  "rps": 120,
   "load_duration": "{{ load_duration }}",
   "allocation_size": "1M",
-  "pause_duration": "5s",
+  "pause_duration": "6s",
   "request_timeout": "1m"
 }
     '''
@@ -52,10 +52,12 @@ class ServerConfigRenderer:
 {
     {%  if not unlimited %}
   "memlimiter": {
+    "go_memory_limit": "{{ go_memory_limit }}",
     "controller_nextgc": {
       "rss_limit": "{{ rss_limit }}",
       "danger_zone_gogc": 50,
       "danger_zone_throttling": 90,
+      "min_gogc": {{ min_gogc }},
       "period": "100ms",
       "component_proportional": {
         "coefficient": {{ coefficient }},
@@ -85,6 +87,8 @@ class ServerConfigRenderer:
         out = self.__template.render(
             unlimited=params.unlimited,
             rss_limit=params.rss_limit_str,
+            go_memory_limit=params.go_memory_limit_str,
+            min_gogc=params.min_gogc,
             coefficient=params.coefficient,
         )
 
@@ -196,6 +200,8 @@ def main():
 
     render.control_params_subplots(reports, Path(root_dir, "control_params.png"))
     render.rss_pivot(reports, Path(root_dir, 'rss.png'))
+    render.gogc_floor_hits(reports, Path(root_dir, 'gogc_floor_hits.png'))
+    render.memory_limits_overlay(reports, Path(root_dir, 'memory_limits_overlay.png'))
 
 
 if __name__ == '__main__':

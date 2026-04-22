@@ -7,6 +7,7 @@
 package backpressure
 
 import (
+	"runtime/debug"
 	"testing"
 
 	"github.com/go-logr/logr/testr"
@@ -31,4 +32,25 @@ func TestOperator(t *testing.T) {
 	notification := <-notifications
 
 	require.Equal(t, params, notification.Backpressure.ControlParameters)
+}
+
+func TestOperatorQuitRestoresGOGC(t *testing.T) {
+	const expectedInitialGOGC = 73
+
+	originalBeforeTest := debug.SetGCPercent(expectedInitialGOGC)
+	defer debug.SetGCPercent(originalBeforeTest)
+
+	logger := testr.New(t)
+	op := NewOperator(logger)
+
+	err := op.SetControlParameters(&stats.ControlParameters{
+		GOGC:                 21,
+		ThrottlingPercentage: NoThrottling,
+	})
+	require.NoError(t, err)
+
+	op.Quit()
+
+	prev := debug.SetGCPercent(expectedInitialGOGC)
+	require.Equal(t, expectedInitialGOGC, prev)
 }

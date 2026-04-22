@@ -9,6 +9,8 @@ package memlimiter
 import (
 	"errors"
 	"fmt"
+	"math"
+	"runtime/debug"
 
 	"github.com/go-logr/logr"
 	"github.com/newcloudtechnologies/memlimiter/backpressure"
@@ -26,6 +28,8 @@ type serviceImpl struct {
 	backpressureOperator backpressure.Operator
 	statsSubscription    stats.ServiceStatsSubscription
 	controller           controller.Controller
+	restoreGoMemoryLimit bool
+	oldGoMemoryLimit     int64
 	logger               logr.Logger
 }
 
@@ -52,6 +56,11 @@ func (s *serviceImpl) Quit() {
 	s.logger.Info("terminating MemLimiter service")
 	s.controller.Quit()
 	s.statsSubscription.Quit()
+	s.backpressureOperator.Quit()
+
+	if s.restoreGoMemoryLimit {
+		debug.SetMemoryLimit(s.oldGoMemoryLimit)
+	}
 }
 
 // newServiceImpl - main entrypoint for MemLimiter.
@@ -69,6 +78,20 @@ func newServiceImpl(
 		return nil, errors.New("nil tracker subscription passed")
 	}
 
+	var (
+		restoreGoMemoryLimit bool
+		oldGoMemoryLimit     int64
+	)
+
+	if cfg.GoMemoryLimit.Value > 0 {
+		if cfg.GoMemoryLimit.Value > uint64(math.MaxInt64) {
+			return nil, errors.New("go memory limit exceeds int64 range")
+		}
+
+		oldGoMemoryLimit = debug.SetMemoryLimit(int64(cfg.GoMemoryLimit.Value))
+		restoreGoMemoryLimit = true
+	}
+
 	logger.Info("starting MemLimiter service")
 
 	c, err := nextgc.NewControllerFromConfig(
@@ -78,6 +101,10 @@ func newServiceImpl(
 		backpressureOperator,
 	)
 	if err != nil {
+		if restoreGoMemoryLimit {
+			debug.SetMemoryLimit(oldGoMemoryLimit)
+		}
+
 		return nil, fmt.Errorf("new controller from config: %w", err)
 	}
 
@@ -86,6 +113,8 @@ func newServiceImpl(
 		backpressureOperator: backpressureOperator,
 		statsSubscription:    statsSubscription,
 		controller:           c,
+		restoreGoMemoryLimit: restoreGoMemoryLimit,
+		oldGoMemoryLimit:     oldGoMemoryLimit,
 		logger:               logger,
 	}, nil
 }
