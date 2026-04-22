@@ -9,6 +9,7 @@ package tracker
 import (
 	"errors"
 	"fmt"
+	"runtime"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -78,6 +79,13 @@ func (tr *Tracker) makeReport() (*Report, error) {
 	out := &Report{}
 
 	out.Timestamp = time.Now().Format(time.RFC3339Nano)
+
+	var memStats runtime.MemStats
+	runtime.ReadMemStats(&memStats)
+
+	if memStats.Sys > memStats.HeapReleased {
+		out.GoRuntimeBytes = memStats.Sys - memStats.HeapReleased
+	}
 
 	mlStats, err := tr.memLimiter.GetStats()
 	if err != nil {

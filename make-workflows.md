@@ -103,6 +103,8 @@ Expected output directory:
 Expected generated files:
 
 - `control_params.png`
+- `gogc_floor_hits.png`
+- `memory_limits_overlay.png`
 - `rss.png`
 - Per-case directories with:
   - `server_config.json`

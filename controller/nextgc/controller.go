@@ -179,15 +179,41 @@ func (c *controllerImpl) updateUtilization(serviceStats stats.ServiceStats) {
 		}
 	}
 
-	c.goAllocLimit = c.cfg.RSSLimit.Value - cgoAllocs
+	goAllocLimit, budgetOK := c.computeGoAllocLimit(cgoAllocs)
+	c.goAllocLimit = goAllocLimit
 
 	// Memory utilization is defined as the relation of NextGC value to the Go allocation limit.
 	// If NextGC becomes higher than the allocation limit, the GC will never run, because
 	// OOM will happen first. That's why we need to push away Go process from the allocation limit.
+	if !budgetOK {
+		// If non-Go allocations already exhausted the RSS budget, force controller to
+		// apply conservative parameters without producing infinities/NaN in stats output.
+		c.utilization = exhaustedBudgetUtilization
+		c.rss = serviceStats.RSS()
+
+		return
+	}
+
 	c.utilization = float64(serviceStats.NextGC()) / float64(c.goAllocLimit)
 
 	// Just for the history, save actual RSS value
 	c.rss = serviceStats.RSS()
+}
+
+// computeGoAllocLimit computes Go allocations budget from total RSS limit and cgo consumption.
+// bool result indicates whether the resulting budget is valid and non-exhausted.
+func (c *controllerImpl) computeGoAllocLimit(cgoAllocs uint64) (uint64, bool) {
+	rssLimit := c.cfg.RSSLimit.Value
+
+	if rssLimit == 0 {
+		return 0, false
+	}
+
+	if cgoAllocs >= rssLimit {
+		return 1, false
+	}
+
+	return rssLimit - cgoAllocs, true
 }
 
 // updateControlValues updates the controller control values.
@@ -225,7 +251,14 @@ func (c *controllerImpl) updateControlParameters() {
 	c.controlParameters.ControllerStats = c.aggregateStats()
 }
 
-const percents = 100
+const (
+	// percents is a constant for converting float64 to uint32.
+	percents = 100
+	// exhaustedBudgetUtilization is a finite marker value greater than 1 used
+	// when cgo allocations fully consume RSS budget.
+	// This avoids Inf/NaN in stats output and guarantees "red zone" behavior.
+	exhaustedBudgetUtilization = 1.01
+)
 
 // updateControlParameterGOGC updates the controller control parameter GOGC.
 func (c *controllerImpl) updateControlParameterGOGC() {
@@ -238,7 +271,18 @@ func (c *controllerImpl) updateControlParameterGOGC() {
 
 	// Control parameters are more conservative in the "red zone".
 	roundedValue := uint32(math.Round(c.sumValue))
-	c.controlParameters.GOGC = int(backpressure.DefaultGOGC - roundedValue)
+	gogc := int(backpressure.DefaultGOGC - roundedValue)
+
+	minGOGC := c.cfg.MinGOGC
+	if minGOGC == 0 {
+		minGOGC = defaultMinGOGC
+	}
+
+	if gogc < minGOGC {
+		gogc = minGOGC
+	}
+
+	c.controlParameters.GOGC = gogc
 }
 
 // updateControlParameterThrottling updates the controller control parameter throttling.

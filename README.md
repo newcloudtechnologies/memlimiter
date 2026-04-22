@@ -10,6 +10,7 @@
 It observes process memory (`RSS`) and Go heap pressure (`runtime.MemStats.NextGC`) and turns that into:
 
 - dynamic `debug.SetGCPercent` tuning,
+- optional `debug.SetMemoryLimit` application on service start,
 - request shedding / backpressure via middleware.
 
 By default, stats come from:
@@ -62,7 +63,9 @@ where:
 - $RSS_{limit}$ is a hard limit for service's physical memory (`RSS`) consumption (so that exceeding this limit will highly likely result in OOM);
 - $CGO$ is a total size of heap allocations made beyond `Cgo` borders (within `C`/`C++`/.... libraries).
 
-A few notes about $CGO$ component. Allocations made outside of the Go allocator, of course, are not controlled by the Go runtime in any way. At the same time, the memory consumption limit is common for both Go and non-Go allocators. Therefore, if non-Go allocations grow, all we can do is shrink the memory budget for Go allocations (which is why we subtract $CGO$ from the denominator of the previous expression). If your service uses `Cgo`, you need to figure out how much memory is allocated “on the other side” – **otherwise MemLimiter won’t be able to save your service from OOM**.
+A few notes about $CGO$ component. Allocations made outside of the Go allocator, of course, are not controlled by the Go runtime in any way. At the same time, the memory consumption limit is common for both Go and non-Go allocators. Therefore, if non-Go allocations grow, all we can do is shrink the memory budget for Go allocations (which is why we subtract $CGO$ from the denominator of the previous expression). If your service uses `Cgo`, you need to figure out how much memory is allocated "on the other side" - **otherwise MemLimiter won't be able to save your service from OOM**.
+
+When reported `$CGO >= RSS_{limit}$`, MemLimiter treats Go budget as exhausted and immediately switches to conservative control mode.
 
 If the service doesn't use `Cgo`, the $Utilization$ formula is simplified to:
 $$Utilization = \frac {NextGC} {RSS_{limit}}$$
@@ -80,29 +83,29 @@ You can adjust the proportional component control signal strength using a coeffi
 The control signal is always saturated to prevent extremal values:
 
 $$ Output = \begin{cases}
-\displaystyle 100 \ \ \ K_{p} \gt 100 \\
-\displaystyle 0 \ \ \ \ \ \ \ K_{p} \lt 100 \\
+\displaystyle 99 \ \ \ K_{p} \gt 99 \\
+\displaystyle 0 \ \ \ \ \ \ \ K_{p} \lt 0 \\
 \displaystyle K_{p} \ \ \ \ otherwise \\
 \end{cases}$$
 
 Finally we convert the dimensionless quantity $Output$ into specific $GOGC$ (for the further use in [`debug.SetGCPercent`](https://pkg.go.dev/runtime/debug#SetGCPercent)) and $Throttling$ (percentage of suppressed requests) values, however, only if the $Utilization$ exceeds the specified limits:
 
-$$ GC = \begin{cases}
-\displaystyle Output \ \ \ Utilization \gt DangerZoneGC \\
-\displaystyle 100 \ \ \ \ \ \ \ \ \ \ otherwise \\
+$$ GOGC = \begin{cases}
+\displaystyle max(MinGOGC, 100 - round(Output)) \ \ \ Utilization \ge DangerZoneGOGC \\
+\displaystyle 100 \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ otherwise \\
 \end{cases}$$
 
 $$ Throttling = \begin{cases}
-\displaystyle Output \ \ \ Utilization \gt DangerZoneThrottling \\
-\displaystyle 0 \ \ \ \ \ \ \ \ \ \ \ \ \ \ otherwise \\
+\displaystyle round(Output) \ \ \ Utilization \ge DangerZoneThrottling \\
+\displaystyle 0 \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ otherwise \\
 \end{cases}$$
 
 ## Architecture
 
 The MemLimiter comprises two main parts:
 
-1. **Core** implementing the memory budget controller and backpressure subsystems. Core relies on actual statistics provided by `stats.ServiceStatsSubscription`. In a critical situation, core may gracefully terminate the application with `utils.ApplicationTerminator`.
-2. **Middleware** providing request throttling feature for various web frameworks. Every time the server receives a request, it uses middleware to ask the MemLimiter’s core for permission to process this request. Currently, only `GRPC` is supported, but `Middleware` is an easily extensible interface, and PRs are welcome.
+1. **Core** implementing the memory budget controller and backpressure subsystems. Core relies on actual statistics provided by `stats.ServiceStatsSubscription`.
+2. **Middleware** providing request throttling feature for various web frameworks. Every time the server receives a request, it uses middleware to ask the MemLimiter's core for permission to process this request. Currently, only `gRPC` is supported, but `Middleware` is an easily extensible interface, and PRs are welcome.
 
 ![Architecture](docs/architecture.png)
 
@@ -122,44 +125,96 @@ You must also provide your own `stats.ServiceStatsSubscription` and `stats.Servi
 
 ### Tuning
 
-There are several key settings in MemLimiter [configuration](controller/nextgc/config.go):
+There are several key settings in MemLimiter configuration (see [top-level config](config.go) and [controller config](controller/nextgc/config.go)):
 
-- `RSSLimit`
-- `DangerZoneGC`
-- `DangerZoneThrottling`
-- `Period`
-- `WindowSize`
-- `Coefficient` ($C_{p}$)
+- `go_memory_limit` (optional, top-level)
+- `controller_nextgc.rss_limit`
+- `controller_nextgc.danger_zone_gogc`
+- `controller_nextgc.danger_zone_throttling`
+- `controller_nextgc.min_gogc`
+- `controller_nextgc.period`
+- `controller_nextgc.component_proportional.window_size`
+- `controller_nextgc.component_proportional.coefficient` ($C_{p}$)
+
+Example:
+
+```json
+{
+  "go_memory_limit": "800M",
+  "controller_nextgc": {
+    "rss_limit": "1G",
+    "danger_zone_gogc": 50,
+    "danger_zone_throttling": 90,
+    "min_gogc": 10,
+    "period": "100ms",
+    "component_proportional": {
+      "coefficient": 1,
+      "window_size": 20
+    }
+  }
+}
+```
 
 You have to pick them empirically for your service. The settings must correspond to the business logic features of a particular service and to the workload expected.
 
-We made a series of performance tests with [Allocator][test/allocator] - an example service which does nothing but allocations that reside in memory for some time. We used different settings, applied the same load and tracked the RSS of a process.
+We made a series of performance tests with [Allocator](test/allocator) - an example service which does nothing but allocations that reside in memory for some time. We used different settings, applied the same load and tracked runtime behavior.
 
-Settings ranges:
+Current `make allocator-analyze` scenario matrix:
+- One unlimited baseline (`memlimiter` disabled).
+- One limited baseline without Go soft limit (`go_memory_limit = 0`).
+- Several limited cases with `go_memory_limit = 800MiB`, including a stricter safety floor (`min_gogc = 30`) case.
+
+Common settings in this matrix:
 - $RSS_{limit} = {1G}$
-- $DangerZoneGC = 50%$
-- $DangerZoneThrottling = 90%$
+- $DangerZoneGOGC = 50\%$
+- $DangerZoneThrottling = 90\%$
 - $Period = 100ms$
 - $WindowSize = 20$
-- $C_{p} \in \\{0, 0.5, 1, 5, 10, 50, 100\\}$
 
-These plots may give you some inspiration on how $C_{p}$ value affects the physical memory consumption other things being equal:
+Scenario-specific values:
+- $go\_memory\_limit \in \{0, 800MiB\}$
+- $MinGOGC \in \{10, 30\}$
+- $C_{p} \in \{0.5, 5, 10, 50\}$
+
+Current analyzer run outputs are generated under `/tmp/allocator/allocator_<HHMMSS>/` (images below are curated examples from `docs/`):
 
 ![Control params](docs/control_params.png)
 
-And the summary plot with RSS consumption dependence on $C_{p}$ value:
+And the summary RSS plot across tested scenarios:
 
-![RSS](docs/rss_hl.png)
+![RSS](docs/rss.png)
 
-The general conclusion is that:
-- The higher the $C_{p}$ is, the lower the $RSS$ consumption.
-- Too low and too high $C_{p}$ values cause self-oscillation of control parameters.
-- Disabling MemLimiter causes OOM.
+Additional plots for new controls (`go_memory_limit` and `min_gogc`) are generated by `make allocator-analyze` in the same run directory. Curated examples are stored under `docs/`:
+
+`gogc_floor_hits.png`:
+
+![GOGC floor hits](docs/gogc_floor_hits.png)
+
+What it means:
+- It shows, per scenario, the share of samples where `GOGC` is clamped by `min_gogc`.
+- Higher values mean the safety floor is actively protecting the process from dropping to overly aggressive GC values.
+
+`memory_limits_overlay.png`:
+
+![Memory limits overlay](docs/memory_limits_overlay.png)
+
+What it means:
+- It shows `RSS` and `Go runtime memory` (tracked as `MemStats.Sys - MemStats.HeapReleased`) with configured limits over time.
+- If `Go runtime memory` is regularly above `go_memory_limit`, the limit is too high or ineffective for this workload.
+- If `RSS` stays high while `Go runtime memory` is low, pressure likely comes from non-Go allocations (`Cgo`/external memory), so better external accounting and/or stronger throttling is needed.
+
+General observations from these experiments:
+- Disabling MemLimiter (`unlimited` baseline) reaches OOM earlier than limited scenarios.
+- `go_memory_limit` helps constrain Go runtime-managed memory while preserving process-level control via RSS and throttling.
+- `min_gogc` protects against extreme GC aggressiveness by clamping controller output in red-zone periods.
+
+Runtime settings changed by MemLimiter are restored on `Service.Quit()`:
+- `GOGC` (`debug.SetGCPercent`)
+- `go_memory_limit` (if configured via `debug.SetMemoryLimit`)
 
 ## TODO
 
 - Extend middleware.Middleware to support more frameworks.
-- Add GOGC limitations to prevent death spirals.
 - Support popular Cgo allocators like Jemalloc or TCMalloc, parse their stats to provide information about Cgo memory consumption.
 
 Your PRs are welcome!

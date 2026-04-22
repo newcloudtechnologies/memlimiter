@@ -23,6 +23,8 @@ type operatorImpl struct {
 
 	notificationChan      chan<- *stats.MemLimiterStats
 	lastControlParameters atomic.Value
+	initialGOGC           atomic.Int64
+	initialGOGCStored     atomic.Bool
 	logger                logr.Logger
 }
 
@@ -85,7 +87,10 @@ func (b *operatorImpl) SetControlParameters(value *stats.ControlParameters) erro
 	}
 
 	// Tune GC pace.
-	debug.SetGCPercent(value.GOGC)
+	oldGOGC := debug.SetGCPercent(value.GOGC)
+	if b.initialGOGCStored.CompareAndSwap(false, true) {
+		b.initialGOGC.Store(int64(oldGOGC))
+	}
 
 	b.logger.Info("control parameters changed", value.ToKeysAndValues()...)
 
@@ -109,4 +114,11 @@ func (b *operatorImpl) SetControlParameters(value *stats.ControlParameters) erro
 	}
 
 	return nil
+}
+
+// Quit gracefully terminates backpressure subsystem.
+func (b *operatorImpl) Quit() {
+	if b.initialGOGCStored.Load() {
+		debug.SetGCPercent(int(b.initialGOGC.Load()))
+	}
 }

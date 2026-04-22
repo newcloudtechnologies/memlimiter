@@ -25,16 +25,21 @@ type GRPC interface {
 	MakeStreamServerInterceptor() grpc.StreamServerInterceptor
 }
 
+// grpcImpl is the implementation of the GRPC interface.
 type grpcImpl struct {
 	backpressureOperator backpressure.Operator
 	logger               logr.Logger
 }
 
+// unknownGRPCMethod is a constant for the unknown GRPC method.
+const unknownGRPCMethod = "<unknown>"
+
+// MakeUnaryServerInterceptor returns a unary server interceptor.
 func (g *grpcImpl) MakeUnaryServerInterceptor() grpc.UnaryServerInterceptor {
 	return func(
 		ctx context.Context,
 		req any,
-		_ *grpc.UnaryServerInfo,
+		info *grpc.UnaryServerInfo,
 		handler grpc.UnaryHandler,
 	) (any, error) {
 		allowed := g.backpressureOperator.AllowRequest()
@@ -47,17 +52,18 @@ func (g *grpcImpl) MakeUnaryServerInterceptor() grpc.UnaryServerInterceptor {
 			logger = g.logger
 		}
 
-		logger.Info("request has been throttled")
+		logger.Info("request has been throttled", "grpc_method", g.grpcMethodFromUnaryInfo(info))
 
 		return nil, status.Error(codes.ResourceExhausted, "request has been throttled")
 	}
 }
 
+// MakeStreamServerInterceptor returns a stream server interceptor.
 func (g *grpcImpl) MakeStreamServerInterceptor() grpc.StreamServerInterceptor {
 	return func(
 		srv any,
 		ss grpc.ServerStream,
-		_ *grpc.StreamServerInfo,
+		info *grpc.StreamServerInfo,
 		handler grpc.StreamHandler,
 	) error {
 		allowed := g.backpressureOperator.AllowRequest()
@@ -70,8 +76,36 @@ func (g *grpcImpl) MakeStreamServerInterceptor() grpc.StreamServerInterceptor {
 			logger = g.logger
 		}
 
-		logger.Info("request has been throttled")
+		logger.Info("request has been throttled", "grpc_method", g.grpcMethodFromStreamInfo(info))
 
 		return status.Error(codes.ResourceExhausted, "request has been throttled")
 	}
+}
+
+// grpcMethodFromUnaryInfo returns the GRPC method from the unary server info.
+func (g *grpcImpl) grpcMethodFromUnaryInfo(info *grpc.UnaryServerInfo) string {
+	if info == nil {
+		return unknownGRPCMethod
+	}
+
+	method := info.FullMethod
+	if method == "" {
+		return unknownGRPCMethod
+	}
+
+	return method
+}
+
+// grpcMethodFromStreamInfo returns the GRPC method from the stream server info.
+func (g *grpcImpl) grpcMethodFromStreamInfo(info *grpc.StreamServerInfo) string {
+	if info == nil {
+		return unknownGRPCMethod
+	}
+
+	method := info.FullMethod
+	if method == "" {
+		return unknownGRPCMethod
+	}
+
+	return method
 }
