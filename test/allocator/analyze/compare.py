@@ -25,10 +25,10 @@ class PerfConfigRenderer:
     __t: Final = '''
 {
   "endpoint": "localhost:1988",
-  "rps": 100,
+  "rps": 120,
   "load_duration": "{{ load_duration }}",
   "allocation_size": "1M",
-  "pause_duration": "5s",
+  "pause_duration": "6s",
   "request_timeout": "1m"
 }
     '''

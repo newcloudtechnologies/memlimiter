@@ -9,6 +9,7 @@ import humanize as humanize
 import matplotlib.pyplot as plt
 import matplotlib.ticker
 import numpy as np
+import pandas as pd
 
 from report import Report
 
@@ -34,10 +35,32 @@ def _make_axes_grid(nplots: int, ncols: int = 2):
 def _report_title(report: Report) -> str:
     params = report.session.params
     if params.unlimited:
+        if _terminated_early(report):
+            elapsed = _elapsed_duration_seconds(report)
+            return f"MemLimiter disabled (terminated at ~{elapsed:.0f}s)"
         return "MemLimiter disabled"
 
     go_limit = params.go_memory_limit_str
     return f"Cp={params.coefficient_str}, MinGOGC={params.min_gogc}, GoLimit={go_limit}"
+
+
+def _expected_duration_seconds(report: Report) -> float:
+    return float(pd.to_timedelta(report.session.params.load_duration).total_seconds())
+
+
+def _elapsed_duration_seconds(report: Report) -> float:
+    if report.df.empty:
+        return 0.0
+
+    return float(report.df['elapsed_time'].max())
+
+
+def _terminated_early(report: Report, tolerance: float = 0.95) -> bool:
+    expected = _expected_duration_seconds(report)
+    if expected <= 0:
+        return False
+
+    return _elapsed_duration_seconds(report) < expected * tolerance
 
 
 def control_params_subplots(reports: List[Report], path: os.PathLike):
@@ -103,7 +126,10 @@ def rss_pivot(reports: List[Report], path: os.PathLike):
     for i in range(n):
         report = reports[n - 1 - i]
         if report.session.params.unlimited:
-            label = 'No limits'
+            if _terminated_early(report):
+                label = f'No limits (terminated at ~{_elapsed_duration_seconds(report):.0f}s)'
+            else:
+                label = 'No limits'
         else:
             label = (
                 f'$C_{{p}}={report.session.params.coefficient_str}$, '

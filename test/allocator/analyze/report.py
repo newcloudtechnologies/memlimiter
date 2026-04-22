@@ -33,19 +33,6 @@ class Report:
         return df
 
     def __post_init__(self):
-        # Emulate OOM event for unconstrained process.
-        if self.session.params.unlimited:
-            last_ts, last_but_one_ts = self.df['timestamp'].iloc[-1], self.df['timestamp'].iloc[-2]
-            delta = last_ts - last_but_one_ts
-            self.df.loc[len(self.df)] = {
-                'timestamp': last_ts + delta,
-                'rss': self.session.params.rss_limit,
-                'go_runtime_bytes': 0,
-                'utilization': 0,
-                'gogc': 0,
-                'throttling': 0,
-            }
-
         # Compute elapsed time.
         self.df['elapsed_time'] = (self.df['timestamp'] - self.df['timestamp'].min()).apply(
             lambda x: x.seconds + x.microseconds / 1000000)
